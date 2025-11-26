@@ -5,6 +5,8 @@ date: today
 format: html
 ---
 
+# EDIT TEST !!!
+
 ## Overview
 
 NFL tracking data tells us how open a receiver is at the throw and at the catch, but it rarely answers a crucial question: *what happened while the ball was in the air?* This project introduces **In‑Air Separation Added (IASA)**, a metric that measures how much separation a receiver gains or loses between release and arrival. Using 2023 regular‑season tracking data from the Big Data Bowl, we build play‑level features, frame‑level separation trajectories, and multiple models to isolate receiver skill from play design, coverage, and game context.
