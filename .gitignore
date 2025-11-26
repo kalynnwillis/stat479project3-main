@@ -9,4 +9,12 @@ data/
 processed/mixed_effects_model_bayes.rds
 processed/receiver_rankings_bayes.csv
 processed/markov_lift_rankings_bayes.csv
-processed/
+processed/mixed_effects_model.rds
+processed/receiver_rankings.csv
+processed/mixed_effects_metrics.csv
+processed/markov_lift_rankings.csv
+processed/markov_lift_bayes_model.rds
+processed/markov_lift_model.rds
+processed/markov_lift_metrics.csv
+processed/markov_lift_model.rds
+processed/mixed_effects_model_bayes.rds

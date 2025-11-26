@@ -2,7 +2,10 @@
 title: "Technical Report: Quantifying In-Air Receiver Movement"
 author: "Eleanor Brothers, Kalynn Willis, Jasmine Peck"
 date: today
-format: html
+format:
+  html:
+    code-fold: true
+    code-summary: "Show code"
 execute:
   echo: true
   warning: false
@@ -118,6 +121,39 @@ Interpreting IASA:
 
 IASA is intentionally simple: it summarizes the net change in separation over the ball’s flight, while our other methods (Markov Lift and mixed‑effects modeling) provide more nuanced views.
 
+```{r}
+#| label: code-compute-iasa
+#| eval: false
+# Compute In-Air Separation Added (IASA) from play-level features.
+# This mirrors the logic in src/02_compute_IASA.R.
+
+library(tidyverse)
+
+compute_iasa <- function(play_features) {
+  play_features |>
+    mutate(
+      IASA = d_catch - d_throw,
+      separation_change_pct = ifelse(d_throw > 0, (d_catch - d_throw) / d_throw, NA_real_),
+      is_separation_gained = IASA > 0
+    )
+}
+
+# Example of applying this to all weekly feature files and saving analysis_full.rds
+# (In practice we run this via src/02_compute_IASA.R in the pipeline.)
+
+if (FALSE) {
+  PROC_DIR <- "../processed"
+
+  feature_files <- list.files(PROC_DIR, pattern = "play_features_w[0-9]+\\.rds", full.names = TRUE)
+  features <- feature_files |>
+    purrr::map(readRDS) |>
+    list_rbind()
+
+  analysis_df <- compute_iasa(features)
+  saveRDS(analysis_df, file.path(PROC_DIR, "analysis_full.rds"))
+}
+```
+
 ### 3.2 Separation States and Markov Lift
 
 To study separation as a **dynamic process**, we discretize separation at each frame into four states:
@@ -151,6 +187,79 @@ $$
 
 Positive Markov Lift indicates that the receiver breaks open from coverage more often than an average NFL receiver, controlling for the fact that the event is rare on any single frame. This metric is naturally expressed in percentage points (e.g., “+6.2%”).
 
+```{r}
+#| label: code-markov-lift
+#| eval: false
+# Core Markov chain and Markov Lift computation.
+# This mirrors src/06_markov_separation.R.
+
+library(tidyverse)
+
+get_state <- function(sep) {
+  dplyr::case_when(
+    sep < 1 ~ "S0_Tight",
+    sep < 3 ~ "S1_Moderate",
+    sep < 5 ~ "S2_Open",
+    TRUE    ~ "S3_WideOpen"
+  )
+}
+
+STATE_LEVELS <- c("S0_Tight", "S1_Moderate", "S2_Open", "S3_WideOpen")
+
+compute_transitions <- function(traj_df) {
+  traj_df |>
+    arrange(game_id, play_id, frame_id) |>
+    group_by(game_id, play_id) |>
+    mutate(
+      state = get_state(separation),
+      next_state = dplyr::lead(state)
+    ) |>
+    filter(!is.na(state), !is.na(next_state)) |>
+    ungroup()
+}
+
+estimate_transition_matrix <- function(transitions) {
+  transitions |>
+    mutate(
+      state = factor(state, levels = STATE_LEVELS),
+      next_state = factor(next_state, levels = STATE_LEVELS)
+    ) |>
+    count(state, next_state, .drop = FALSE) |>
+    group_by(state) |>
+    mutate(prob = ifelse(sum(n) > 0, n / sum(n), 0)) |>
+    ungroup()
+}
+
+compute_markov_lift <- function(transitions, features_df, min_transitions = 50) {
+  relevant_starts <- c("S0_Tight", "S1_Moderate")
+  good_ends <- c("S2_Open", "S3_WideOpen")
+
+  league_rate <- transitions |>
+    filter(state %in% relevant_starts) |>
+    summarise(success_rate = mean(next_state %in% good_ends)) |>
+    pull(success_rate)
+
+  player_stats <- transitions |>
+    inner_join(features_df, by = c("game_id", "play_id")) |>
+    filter(state %in% relevant_starts) |>
+    group_by(targeted_id) |>
+    summarise(
+      n_transitions = n(),
+      successes = sum(next_state %in% good_ends),
+      player_rate = successes / n_transitions,
+      .groups = "drop"
+    ) |>
+    filter(n_transitions >= min_transitions) |>
+    mutate(markov_lift = player_rate - league_rate) |>
+    arrange(desc(markov_lift))
+
+  list(
+    league_rate = league_rate,
+    player_stats = player_stats
+  )
+}
+```
+
 ### 3.3 Mixed‑Effects Model for IASA over Expected
 
 Raw IASA conflates receiver skill with **context**: longer air‑time throws, high‑leverage downs, and certain route/coverage combinations are naturally harder environments in which to gain separation. To isolate receiver skill, we fit a **linear mixed‑effects model**:
@@ -178,6 +287,87 @@ To quantify uncertainty in these receiver effects, we also fit a **Bayesian anal
 
 Model diagnostics (fitted vs. observed IASA and residual distributions) are used to assess linearity, variance assumptions, and the contribution of random effects.
 
+```{r}
+#| label: code-mixed-effects
+#| eval: false
+# Mixed-effects model for IASA over expected (frequentist and Bayesian).
+# This mirrors src/03_models.R.
+
+library(tidyverse)
+library(lme4)
+
+fit_mixed_effects_model <- function(data) {
+  lmer(
+    IASA ~ air_time + d_throw + pass_length + defenders_in_the_box +
+      team_coverage_man_zone + route_of_targeted_receiver +
+      (1 | targeted_id) + (1 | game_id),
+    data = data,
+    REML = FALSE
+  )
+}
+
+if (FALSE) {
+  PROC_DIR <- "../processed"
+  df <- readRDS(file.path(PROC_DIR, "analysis_full.rds"))
+
+  df_model <- df |>
+    drop_na(IASA, air_time, d_throw, targeted_id, pass_length, defenders_in_the_box) |>
+    filter(air_time >= 0) |>
+    mutate(
+      targeted_id = as.factor(targeted_id),
+      game_id = as.factor(game_id)
+    )
+
+  mem_model <- fit_mixed_effects_model(df_model)
+  saveRDS(mem_model, file.path(PROC_DIR, "mixed_effects_model.rds"))
+}
+```
+
+```{r}
+#| label: code-bayesian-mixed-effects
+#| eval: false
+# Bayesian analogue of the mixed-effects IASA model using brms.
+
+library(brms)
+
+fit_bayesian_iasa_model <- function(data) {
+  brm(
+    IASA ~ air_time + d_throw + pass_length + defenders_in_the_box +
+      team_coverage_man_zone + route_of_targeted_receiver +
+      (1 | targeted_id) + (1 | game_id),
+    data   = data,
+    family = gaussian(),
+    prior  = c(
+      prior(normal(0, 2), class = "Intercept"),
+      prior(normal(0, 1), class = "b"),
+      prior(exponential(1), class = "sd"),
+      prior(exponential(1), class = "sigma")
+    ),
+    iter   = 2000,
+    warmup = 1000,
+    chains = 4,
+    cores  = 4,
+    control = list(adapt_delta = 0.95)
+  )
+}
+
+if (FALSE) {
+  PROC_DIR <- "../processed"
+  df <- readRDS(file.path(PROC_DIR, "analysis_full.rds"))
+
+  df_model <- df |>
+    drop_na(IASA, air_time, d_throw, targeted_id, pass_length, defenders_in_the_box) |>
+    filter(air_time >= 0) |>
+    mutate(
+      targeted_id = as.factor(targeted_id),
+      game_id = as.factor(game_id)
+    )
+
+  bayes_model <- fit_bayesian_iasa_model(df_model)
+  saveRDS(bayes_model, file.path(PROC_DIR, "mixed_effects_model_bayes.rds"))
+}
+```
+
 ### 3.4 Predictive Modeling of Final Separation (XGBoost)
 
 While the mixed‑effects model attributes skill to receivers, we also ask a complementary question: **given what we know at the throw, how much separation should we expect at the catch?** To answer this, we fit a gradient‑boosted tree model (XGBoost) to predict \(d_{catch}\) using only pre‑throw or contemporaneous features, including:
@@ -190,6 +380,101 @@ While the mixed‑effects model attributes skill to receivers, we also ask a com
 We train the model on a subset of plays and hold out a test set to evaluate performance. Our primary metric is **Root Mean Squared Error (RMSE)** in yards, supplemented by visual inspection of predicted vs. observed separation and a feature importance analysis.
 
 Unlike the mixed‑effects model, which is built around interpretability and receiver random effects, XGBoost is optimized for predictive accuracy and can capture **non‑linear interactions** between features (e.g., how air time interacts with initial separation differently on certain route types).
+
+```{r}
+#| label: code-xgboost
+#| eval: false
+# Gradient-boosted trees for predicting d_catch from pre-throw features.
+# This mirrors src/07_ml_models.R.
+
+library(tidyverse)
+library(xgboost)
+library(caret)
+
+prepare_ml_data <- function(analysis_df) {
+  desired_cols <- c(
+    "d_catch",      # target
+    "d_throw",
+    "air_time",
+    "pass_length",
+    "defenders_in_the_box",
+    "expected_points",
+    "expected_points_added",
+    "yards_gained",
+    "offense_formation",
+    "receiver_alignment",
+    "route_of_targeted_receiver",
+    "team_coverage_man_zone",
+    "team_coverage_type",
+    "pass_location_type",
+    "dropback_type"
+  )
+
+  available <- intersect(desired_cols, names(analysis_df))
+
+  analysis_df |>
+    select(all_of(available)) |>
+    filter(!is.na(d_catch), !is.na(d_throw), !is.na(air_time)) |>
+    mutate(
+      across(
+        where(is.character),
+        ~ factor(replace_na(.x, "Unknown"))
+      )
+    )
+}
+
+train_xgboost <- function(ml_df) {
+  set.seed(123)
+  train_index <- createDataPartition(ml_df$d_catch, p = 0.8, list = FALSE)
+  train_data <- ml_df[train_index, ]
+  test_data  <- ml_df[-train_index, ]
+
+  train_matrix <- model.matrix(d_catch ~ . - 1, data = train_data)
+  test_matrix  <- model.matrix(d_catch ~ . - 1, data = test_data)
+
+  dtrain <- xgb.DMatrix(
+    data = train_matrix,
+    label = train_data$d_catch
+  )
+
+  dtest <- xgb.DMatrix(
+    data = test_matrix,
+    label = test_data$d_catch
+  )
+
+  params <- list(
+    objective = "reg:squarederror",
+    eta = 0.1,
+    max_depth = 6,
+    subsample = 0.8,
+    colsample_bytree = 0.8
+  )
+
+  model <- xgb.train(
+    params = params,
+    data = dtrain,
+    nrounds = 100,
+    watchlist = list(train = dtrain, test = dtest),
+    print_every_n = 10,
+    early_stopping_rounds = 10
+  )
+
+  list(
+    model = model,
+    train_data = train_data,
+    test_data = test_data
+  )
+}
+
+if (FALSE) {
+  PROC_DIR <- "../processed"
+  df <- readRDS(file.path(PROC_DIR, "analysis_full.rds"))
+
+  ml_data <- prepare_ml_data(df)
+  res <- train_xgboost(ml_data)
+  saveRDS(res$model, file.path(PROC_DIR, "xgboost_model.rds"))
+}
+```
 
 ### 3.5 Reproducible Pipeline
 
