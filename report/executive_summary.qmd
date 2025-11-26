@@ -1,0 +1,28 @@
+---
+title: "Executive Summary: In-Air Receiver Movement Metric (IASA)"
+author: "Eleanor Brothers, Kalynn Willis, Jasmine Peck"
+date: today
+format: html
+---
+
+## Overview
+
+NFL tracking data tells us how open a receiver is at the throw and at the catch, but it rarely answers a crucial question: *what happened while the ball was in the air?* This project introduces **In‑Air Separation Added (IASA)**, a metric that measures how much separation a receiver gains or loses between release and arrival. Using 2023 regular‑season tracking data from the Big Data Bowl, we build play‑level features, frame‑level separation trajectories, and multiple models to isolate receiver skill from play design, coverage, and game context.
+
+## Approach
+
+For every targeted receiver, we identify the throw and catch frames, compute separation to the nearest defender at each point, and define IASA as the change in separation during ball flight. We then:
+
+- Study how IASA behaves across the league and how it relates to throw air time and initial separation.
+- Model separation over time as a four‑state process (tight, moderate, open, wide open) and compute a **Markov Lift** score that measures how often a receiver breaks from covered (tight/moderate) to open (open/wide open) relative to league average.
+- Fit a **mixed‑effects model** that controls for context (route type, coverage family, defenders in the box, air time, initial separation) while estimating each receiver’s “IASA over expected.”
+- Train a **gradient‑boosted model (XGBoost)** that predicts separation at the catch from pre‑throw and contextual features, providing a complementary view of which situations most often produce open targets.
+
+## Main Takeaways
+
+League‑wide, receivers usually **lose separation** while the ball is in the air; defenders naturally close space, especially on deeper, longer‑air‑time throws. Despite that baseline, a subset of receivers consistently add separation after the ball is released, even after accounting for route, coverage, and box count. The Markov analysis shows that breaking open from tight or moderate coverage is rare on any individual frame, but top receivers achieve this several percentage points more often than the league as a whole. The ML model reinforces these findings, highlighting initial separation, air time, and specific route‑and‑coverage combinations as the strongest drivers of open catches.
+
+## Implications
+
+For front offices and coaches, this work separates **who created separation** from **who merely benefited from the call or coverage**. IASA and Markov Lift provide receiver‑centric measures of in‑air movement skill, while the mixed‑effects and ML models explain how that skill interacts with scheme and defensive structure. Together, these tools offer a repeatable framework for scouting receivers, evaluating route concepts, and communicating data‑driven insights to coaches and players in football language rather than statistical jargon.
+

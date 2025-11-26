@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Eleanor Brothers, Kalynn Willis, Jasmine Peck">
+<meta name="dcterms.date" content="2025-11-26">
+
+<title>Technical Report: Quantifying In-Air Receiver Movement</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="technical_report_files/libs/clipboard/clipboard.min.js"></script>
+<script src="technical_report_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="technical_report_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="technical_report_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="technical_report_files/libs/quarto-html/popper.min.js"></script>
+<script src="technical_report_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="technical_report_files/libs/quarto-html/anchor.min.js"></script>
+<link href="technical_report_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="technical_report_files/libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="technical_report_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="technical_report_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="technical_report_files/libs/bootstrap/bootstrap-d6a003b94517c951b2d65075d42fb01b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Technical Report: Quantifying In-Air Receiver Movement</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Eleanor Brothers, Kalynn Willis, Jasmine Peck </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">November 26, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="executive-summary" class="level2">
+<h2 class="anchored" data-anchor-id="executive-summary">Executive Summary</h2>
+<section id="overview" class="level3">
+<h3 class="anchored" data-anchor-id="overview">Overview</h3>
+<p>NFL tracking data tells us how open a receiver is at the throw and at the catch, but it rarely answers a crucial question: <em>what happened while the ball was in the air?</em> Defenders are reacting, the ball is traveling, and receivers are fighting for position, yet most public metrics only capture two snapshots in time. This project introduces <strong>In‑Air Separation Added (IASA)</strong>, a play‑level measure of how much separation a targeted receiver gains or loses between the throw and the arrival of the ball, and combines it with a <strong>Markov Lift</strong> metric and a predictive model for final separation.</p>
+<p>Using 2023 regular‑season tracking data from the Big Data Bowl (Weeks 1–18), we reconstruct the full separation trajectory for every targeted receiver. We define IASA as the change in receiver–defender distance during ball flight, categorize separation into four intuitive states (tight, moderate, open, wide open), and model transitions between these states as a Markov chain. On top of this, we fit a mixed‑effects model to separate receiver skill from play context and an XGBoost model that predicts separation at the catch from pre‑throw and situational features.</p>
+</section>
+<section id="approach" class="level3">
+<h3 class="anchored" data-anchor-id="approach">Approach</h3>
+<p>Our analysis proceeds in four steps:</p>
+<ol type="1">
+<li><strong>Play‑level separation</strong>: For each targeted play, we identify the throw and catch (or arrival) frames, compute distance to the nearest defender each frame, and define IASA as the difference between separation at the catch and at the throw.</li>
+<li><strong>Separation dynamics</strong>: We discretize separation into four states and estimate a league‑wide transition matrix that describes how often receivers move between states frame‑to‑frame. We then compute <strong>Markov Lift</strong> for each receiver: how often they “break open” from tight/moderate to open/wide‑open relative to league average.</li>
+<li><strong>Context‑adjusted skill</strong>: We fit a linear mixed‑effects model for IASA that includes air time, initial separation, and contextual play features as fixed effects and receiver/game effects as random effects. The receiver‑level random effects define <strong>IASA over expected</strong>.</li>
+<li><strong>Predictive model</strong>: We train an XGBoost model to predict final separation using only pre‑throw information (including (d_{throw}), air time, and play context), and evaluate its performance on a held‑out test set.</li>
+</ol>
+</section>
+<section id="main-findings" class="level3">
+<h3 class="anchored" data-anchor-id="main-findings">Main Findings</h3>
+<p>League‑wide, receivers usually <strong>lose separation</strong> while the ball is in the air: the mean IASA is <strong>−0.82 yards</strong>, reflecting how defenders naturally close space on most throws, especially deeper passes with longer air time. Longer air time and larger initial separation are both associated with more negative IASA, consistent with regression to the mean and the extra time defenders have to recover. Despite this baseline, a subset of receivers consistently generate <strong>positive IASA over expected</strong>, adding separation even after accounting for route, coverage, and situational factors.</p>
+<p>From the Markov‑chain perspective, separation states are “sticky” from frame to frame, but <strong>breaking open</strong> from tight or moderate coverage is still observable and varies across players. The league‑wide probability of moving from a covered state (tight/moderate) to an open state (open/wide‑open) is <strong>1.49% per frame</strong>, while top receivers exceed this by several percentage points. Our predictive model attains an RMSE of <strong>1.92 yards</strong> for final separation and confirms that initial separation and air time are the dominant predictive features, with context variables providing incremental but smaller gains.</p>
+</section>
+<section id="implications" class="level3">
+<h3 class="anchored" data-anchor-id="implications">Implications</h3>
+<p>For front offices and coaches, this work separates <strong>who created separation</strong> from <strong>who merely benefited from the call or coverage</strong>. IASA over expected attributes in‑air movement skill to receivers after adjusting for down‑and‑distance, route concepts, coverage family, and box count. Markov Lift reframes separation as a <strong>sequence of coverage states</strong> and highlights which receivers are most likely to break open late in the route, a key skill in third‑down and red‑zone situations. The predictive model offers a complementary lens, identifying situations that are inherently separation‑friendly even before the ball is thrown. Together, these tools provide a framework for scouting receivers, designing route concepts, and communicating data‑driven insights in football language rather than purely statistical terms.</p>
+</section>
+</section>
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">1. Introduction</h2>
+<section id="motivation-and-problem-statement" class="level3">
+<h3 class="anchored" data-anchor-id="motivation-and-problem-statement">1.1 Motivation and Problem Statement</h3>
+<p>In the NFL, separation is usually summarized at a single moment: how open a receiver is at the throw or at the catch. These snapshots are informative but incomplete. A receiver who is initially covered can win late separation at the catch point, while another may be wide open at the throw but allow a defender back into the play as the ball arrives. Traditional metrics blur these stories together, making it difficult to distinguish <strong>route‑running craft</strong> from <strong>play design</strong> and <strong>coverage busts</strong>.</p>
+<p>Big Data Bowl tracking data offers a unique opportunity to quantify what happens during the flight of the ball. At 10 Hz resolution, we observe every step a receiver and the nearest defender take between the throw and the arrival. Our goal is to convert this raw positional data into interpretable, receiver‑centric metrics that:</p>
+<ul>
+<li>Quantify how much separation is typically gained or lost while the ball is in the air.</li>
+<li>Isolate receiver skill from contextual factors such as route type, coverage family, and air time.</li>
+<li>Identify which receivers are most likely to break open late in the route.</li>
+</ul>
+</section>
+<section id="football-examples" class="level3">
+<h3 class="anchored" data-anchor-id="football-examples">1.2 Football Examples</h3>
+<p>Consider two common scenarios:</p>
+<ul>
+<li>A deep go route against press coverage where the receiver initially loses at the line but stacks the defender and creates late separation just as the ball arrives.</li>
+<li>A shallow crosser scheme where route design generates a wide‑open window at the throw, but the defender closes quickly and contests the catch by the time the ball arrives.</li>
+</ul>
+<p>Both plays may record similar separation at the catch, yet the underlying skills are very different. The first reflects <strong>in‑air separation creation</strong>, while the second reflects <strong>in‑air separation loss</strong> despite a favorable design. Our analysis focuses specifically on this in‑air phase.</p>
+</section>
+<section id="research-questions" class="level3">
+<h3 class="anchored" data-anchor-id="research-questions">1.3 Research Questions</h3>
+<p>We structure our analysis around four main questions:</p>
+<ol type="1">
+<li><strong>Baseline Behavior</strong>: How much separation do NFL receivers typically gain or lose between the throw and the catch, and how does this distribution look across the league?</li>
+<li><strong>Drivers of In‑Air Separation</strong>: How do air time, initial separation, and contextual features (e.g., route and coverage families) influence IASA?</li>
+<li><strong>Receiver Skill and Markov Lift</strong>: After accounting for context, which receivers consistently add separation in the air? How often do they transition from tight/moderate coverage into open/wide‑open states relative to league baseline?</li>
+<li><strong>Predictability</strong>: To what extent can final separation be predicted using only pre‑throw information, and which features are most important?</li>
+</ol>
+</section>
+</section>
+<section id="data-description" class="level2">
+<h2 class="anchored" data-anchor-id="data-description">2. Data Description</h2>
+<section id="data-sources" class="level3">
+<h3 class="anchored" data-anchor-id="data-sources">2.1 Data Sources</h3>
+<p>We utilize tracking and play‑level data from the <strong>Big Data Bowl 2026</strong> release, covering the <strong>2023 NFL regular season (Weeks 1–18)</strong>. The key components are:</p>
+<ul>
+<li><strong>Tracking data</strong>: Frame‑level (x, y) positions for all players and the ball at 10 Hz.</li>
+<li><strong>Play metadata</strong>: Play descriptions, game context (down, distance, time, score), and offense/defense identifiers.</li>
+<li><strong>Targeted receiver information</strong>: Identifiers for the targeted receiver and event tags for the throw and the ball arrival (catch, pass breakup, or incompletion).</li>
+</ul>
+<p>We conceptually split the tracking into:</p>
+<ul>
+<li><strong>Input segment</strong>: Frames from the snap up to the throw.</li>
+<li><strong>Output segment</strong>: Frames from the throw through the arrival of the ball or the end of the play.</li>
+</ul>
+<p>Our focus in this report is on the <strong>output segment</strong>, where in‑air receiver–defender interactions occur.</p>
+</section>
+<section id="sample-construction" class="level3">
+<h3 class="anchored" data-anchor-id="sample-construction">2.2 Sample Construction</h3>
+<p>Starting from all passing plays in Weeks 1–18, we construct our analysis sample as follows:</p>
+<ul>
+<li>Restrict to plays with a clearly identified <strong>targeted receiver</strong>, throw frame, and ball‑arrival frame.</li>
+<li>Remove plays where tracking is incomplete during the ball’s flight (e.g., missing frames or ambiguous timing).</li>
+<li>Compute, for each frame during ball flight, the distance between the targeted receiver and the <strong>nearest defender</strong>, and summarize this trajectory at the play level.</li>
+</ul>
+<p>After these filters, our final dataset contains <strong>14,108 passing plays</strong>. For each play, we store:</p>
+<ul>
+<li>Separation at the throw ((d_{throw})).</li>
+<li>Separation at the catch or arrival ((d_{catch})).</li>
+<li>Air time (duration between throw and arrival).</li>
+<li>The full sequence of separation states (tight, moderate, open, wide open) during ball flight.</li>
+<li>Play‑level contextual variables used in our models (route/coverage families, box count, etc.).</li>
+</ul>
+</section>
+</section>
+<section id="methodology" class="level2">
+<h2 class="anchored" data-anchor-id="methodology">3. Methodology</h2>
+<section id="inair-separation-added-iasa" class="level3">
+<h3 class="anchored" data-anchor-id="inair-separation-added-iasa">3.1 In‑Air Separation Added (IASA)</h3>
+<p>Our primary play‑level metric is <strong>In‑Air Separation Added (IASA)</strong>, defined as:</p>
+<p><span class="math display">\[
+IASA = d_{catch} - d_{throw},
+\]</span></p>
+<p>where (d_{throw}) is the distance (in yards) between the targeted receiver and the nearest defender at the throw frame, and (d_{catch}) is the corresponding distance at the ball‑arrival frame. Positive IASA indicates that the receiver <strong>gained separation</strong> while the ball was in the air, whereas negative IASA indicates that the defender <strong>closed the gap</strong>.</p>
+<p>Interpreting IASA:</p>
+<ul>
+<li>A receiver with (IASA = +1.0) yard turned a marginally contested target ((d_{throw} = 2.5) yards) into a more open catch point ((d_{catch} = 3.5) yards).</li>
+<li>A receiver with (IASA = -1.5) yards may have started open but allowed a defender to re‑enter the passing lane by the catch.</li>
+</ul>
+<p>IASA is intentionally simple: it summarizes the net change in separation over the ball’s flight, while our other methods (Markov Lift and mixed‑effects modeling) provide more nuanced views.</p>
+</section>
+<section id="separation-states-and-markov-lift" class="level3">
+<h3 class="anchored" data-anchor-id="separation-states-and-markov-lift">3.2 Separation States and Markov Lift</h3>
+<p>To study separation as a <strong>dynamic process</strong>, we discretize separation at each frame into four states:</p>
+<ul>
+<li><strong>S0 (Tight)</strong>: &lt; 1 yard</li>
+<li><strong>S1 (Moderate)</strong>: 1–3 yards</li>
+<li><strong>S2 (Open)</strong>: 3–5 yards</li>
+<li><strong>S3 (Wide Open)</strong>: &gt; 5 yards</li>
+</ul>
+<p>For each targeted route, we observe a sequence of states ((S_t)_{t=1}^T) during ball flight. We model these transitions with a first‑order <strong>Markov chain</strong>, estimating the transition probabilities:</p>
+<p><span class="math display">\[
+P(S_{t+1} = j \mid S_t = i), \quad i, j \in \{0,1,2,3\}.
+\]</span></p>
+<p>The league‑wide transition matrix captures how likely a receiver is to maintain or change separation from frame to frame. The diagonal elements reflect <strong>state persistence</strong>, while off‑diagonal elements represent gains or losses in separation.</p>
+<p>We focus on transitions from <strong>covered</strong> states (S0, S1) to <strong>open</strong> states (S2, S3). Define:</p>
+<p><span class="math display">\[
+p^{\text{league}}_{\text{break}} = P(S_{t+1} \in \{2,3\} \mid S_t \in \{0,1\})
+\]</span></p>
+<p>as the league‑average probability of “breaking open” in a single frame. Empirically, this baseline is <strong>1.49% per frame</strong>.</p>
+<p>For each receiver, we compute an analogous empirical probability (p^{}_{}) based on their frame‑level transitions. We then define <strong>Markov Lift</strong> as:</p>
+<p><span class="math display">\[
+\text{Markov Lift} = p^{\text{player}}_{\text{break}} - p^{\text{league}}_{\text{break}}.
+\]</span></p>
+<p>Positive Markov Lift indicates that the receiver breaks open from coverage more often than an average NFL receiver, controlling for the fact that the event is rare on any single frame. This metric is naturally expressed in percentage points (e.g., “+6.2%”).</p>
+</section>
+<section id="mixedeffects-model-for-iasa-over-expected" class="level3">
+<h3 class="anchored" data-anchor-id="mixedeffects-model-for-iasa-over-expected">3.3 Mixed‑Effects Model for IASA over Expected</h3>
+<p>Raw IASA conflates receiver skill with <strong>context</strong>: longer air‑time throws, high‑leverage downs, and certain route/coverage combinations are naturally harder environments in which to gain separation. To isolate receiver skill, we fit a <strong>linear mixed‑effects model</strong>:</p>
+<p><span class="math display">\[
+IASA_{\text{play}} = \beta_0
+  + \beta_1 \cdot \text{Air Time}
+  + \beta_2 \cdot d_{throw}
+  + \mathbf{x}_{\text{play}}^\top \boldsymbol{\beta}
+  + u_{\text{receiver}}
+  + u_{\text{game}}
+  + \epsilon,
+\]</span></p>
+<p>where:</p>
+<ul>
+<li>(_{}) encodes contextual fixed effects (e.g., route family, coverage family, box count, down‑and‑distance).</li>
+<li>(u_{}) is a receiver‑level random effect capturing <strong>in‑air separation skill</strong> not explained by context.</li>
+<li>(u_{}) is a game‑level random effect capturing shared conditions within a game (e.g., weather, opponent tendencies).</li>
+<li>() is residual error.</li>
+</ul>
+<p>We estimate the model using standard mixed‑effects software and summarize receiver skill via <strong>IASA over expected</strong>, defined as the estimated receiver random effect (u_{}). Intuitively, a receiver with (u_{} = +0.4) tends to finish plays with roughly 0.4 yards more in‑air separation than expected, conditional on their route mix and situations; a receiver with (u_{} = -0.3) tends to lose additional separation relative to expectation.</p>
+<p>To quantify uncertainty in these receiver effects, we also fit a <strong>Bayesian analogue</strong> of the mixed‑effects model using weakly informative priors on the fixed effects and on the receiver/game random‑effect standard deviations. This yields a posterior distribution for each receiver’s IASA over expected, from which we report posterior means and 95% credible intervals; players with few targets naturally have wider intervals, reflecting greater uncertainty in their estimated in‑air separation skill.</p>
+<p>Model diagnostics (fitted vs.&nbsp;observed IASA and residual distributions) are used to assess linearity, variance assumptions, and the contribution of random effects.</p>
+</section>
+<section id="predictive-modeling-of-final-separation-xgboost" class="level3">
+<h3 class="anchored" data-anchor-id="predictive-modeling-of-final-separation-xgboost">3.4 Predictive Modeling of Final Separation (XGBoost)</h3>
+<p>While the mixed‑effects model attributes skill to receivers, we also ask a complementary question: <strong>given what we know at the throw, how much separation should we expect at the catch?</strong> To answer this, we fit a gradient‑boosted tree model (XGBoost) to predict (d_{catch}) using only pre‑throw or contemporaneous features, including:</p>
+<ul>
+<li>Initial separation (d_{throw}).</li>
+<li>Air time.</li>
+<li>Play context (down, distance, field position).</li>
+<li>Aggregated route/coverage indicators and defensive structure variables.</li>
+</ul>
+<p>We train the model on a subset of plays and hold out a test set to evaluate performance. Our primary metric is <strong>Root Mean Squared Error (RMSE)</strong> in yards, supplemented by visual inspection of predicted vs.&nbsp;observed separation and a feature importance analysis.</p>
+<p>Unlike the mixed‑effects model, which is built around interpretability and receiver random effects, XGBoost is optimized for predictive accuracy and can capture <strong>non‑linear interactions</strong> between features (e.g., how air time interacts with initial separation differently on certain route types).</p>
+</section>
+<section id="reproducible-pipeline" class="level3">
+<h3 class="anchored" data-anchor-id="reproducible-pipeline">3.5 Reproducible Pipeline</h3>
+<p>All intermediate data products and model outputs flow through a scripted R pipeline. For reproducibility, the main steps are:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1) Feature engineering and separation trajectories for each week</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"src/01_engineer_features.R"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2) Compute IASA and join supplementary play-level context</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"src/02_compute_IASA.R"</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 3) Fit mixed-effects model and write receiver rankings + metrics</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"src/03_models.R"</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 4) Compute Markov transition matrix and Markov Lift rankings</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"src/06_markov_separation.R"</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 5) Train XGBoost model and export feature importance + validation metrics</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"src/07_ml_models.R"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The scripts in <code>src/</code> write processed <code>.rds</code> and <code>.csv</code> files to <code>processed/</code>, which are in turn read by this Quarto document to generate tables and figures.</p>
+</section>
+</section>
+<section id="results" class="level2">
+<h2 class="anchored" data-anchor-id="results">4. Results</h2>
+<section id="separation-dynamics-iasa" class="level3">
+<h3 class="anchored" data-anchor-id="separation-dynamics-iasa">4.1 Separation Dynamics (IASA)</h3>
+<p>Across the 14,108 passing plays in our sample, receivers <strong>typically lose separation</strong> during ball flight. The mean IASA is <strong>−0.82 yards</strong>, and the distribution is centered below zero with a long left tail:</p>
+<ul>
+<li>Many plays cluster near 0, where defenders and receivers maintain roughly constant separation.</li>
+<li>A substantial mass of plays shows moderate separation loss, consistent with defenders closing space on deeper throws.</li>
+<li>A smaller but important right tail captures plays where receivers gain meaningful separation in the air.</li>
+</ul>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../figures/iasa_distribution.png" class="img-fluid figure-img"></p>
+<figcaption>Distribution of IASA</figcaption>
+</figure>
+</div>
+<p>From a football perspective, this baseline matters: if most plays lose separation, then simply maintaining or slightly improving separation is evidence of skill. It also highlights why raw “separation at catch” can be misleading without context—some receivers routinely fight back to neutral or positive IASA from difficult starting points.</p>
+</section>
+<section id="drivers-of-separation-change" class="level3">
+<h3 class="anchored" data-anchor-id="drivers-of-separation-change">4.2 Drivers of Separation Change</h3>
+<p>The mixed‑effects model quantifies how air time, initial separation, and context relate to IASA. Two core drivers emerge:</p>
+<ol type="1">
+<li><strong>Air Time</strong>: Longer throws result in more lost separation. The estimated coefficient of approximately (_1 = -0.09) (yards per second of air time, (p &lt; 0.01)) implies that adding about half a second to a throw’s flight time costs, on average, an additional () yards of separation. This matches the intuition that deeper balls give defenders more time to recover.</li>
+<li><strong>Initial Separation</strong>: There is strong regression to the mean, with an estimated coefficient of (_2 ) ((p &lt; 0.001)). Routes that are very open at the throw tend to see some closure by the catch, while tightly contested throws occasionally drift toward more neutral separation.</li>
+</ol>
+<p><img src="../figures/iasa_vs_airtime.png" class="img-fluid" alt="IASA vs Air Time"> <img src="../figures/iasa_vs_dthrow.png" class="img-fluid" alt="IASA vs Initial Separation"></p>
+<p>Model diagnostics show that fitted vs.&nbsp;observed IASA align reasonably well and residuals are roughly centered and symmetric:</p>
+<p><img src="../figures/mixed_effects_fitted_vs_observed.png" class="img-fluid" alt="Mixed-Effects Fitted vs Observed"> <img src="../figures/mixed_effects_residuals_hist.png" class="img-fluid" alt="Mixed-Effects Residuals"></p>
+<p>These patterns suggest that the combination of air time, initial separation, and contextual covariates captures a meaningful portion of the variation in in‑air separation, while leaving room for receiver‑specific effects and unmeasured factors (e.g., quarterback ball placement, subtle contact downfield).</p>
+</section>
+<section id="markov-chain-analysis" class="level3">
+<h3 class="anchored" data-anchor-id="markov-chain-analysis">4.3 Markov Chain Analysis</h3>
+<p>We next examine separation as a frame‑level process. The estimated league‑wide transition matrix reveals that <strong>states are sticky</strong>: most frames remain in the same separation state on the next frame, especially in S2 (open) and S3 (wide open). However, non‑trivial movement occurs:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../figures/markov_transitions.png" class="img-fluid figure-img"></p>
+<figcaption>Markov Transition Matrix</figcaption>
+</figure>
+</div>
+<p>From this matrix, the league‑average probability of <strong>breaking open</strong>—transitioning from covered (S0/S1) to open (S2/S3) in a single frame—is <strong>1.49%</strong>. Because frames occur at 0.1‑second resolution, this may seem small, but across a typical 0.7–1.0 second ball flight there are multiple opportunities for change.</p>
+<p>To identify receivers who are particularly adept at breaking open mid‑route, we compute Markov Lift as the difference between a receiver’s personal break‑open probability and the league baseline. Players with large positive Markov Lift values repeatedly convert tight/moderate coverage into open windows more often than expected, even after aggregating across many games. In addition to the empirical estimates, we fit a <strong>Bayesian hierarchical model</strong> for these break‑open rates, which partially pools low‑volume receivers toward the league average and provides posterior means and 95% credible intervals for each player’s propensity to break open.</p>
+<p><strong>Top Receivers by Markov Lift</strong> are shown below:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>lift_path <span class="ot">&lt;-</span> <span class="st">"../processed/markov_lift_rankings.csv"</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>lift_bayes_path <span class="ot">&lt;-</span> <span class="st">"../processed/markov_lift_rankings_bayes.csv"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(lift_path)) {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  lift <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(lift_path)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  top_lift <span class="ot">&lt;-</span> lift <span class="sc">|&gt;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">head</span>(<span class="dv">5</span>) <span class="sc">|&gt;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">player_rate =</span> <span class="fu">paste0</span>(<span class="fu">round</span>(player_rate <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>), <span class="st">"%"</span>),</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">markov_lift =</span> <span class="fu">paste0</span>(<span class="st">"+"</span>, <span class="fu">round</span>(markov_lift <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>), <span class="st">"%"</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_lift)) {</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    top_lift <span class="sc">|&gt;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(targeted_id, targeted_name, player_rate, markov_lift) <span class="sc">|&gt;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"Success Rate"</span>, <span class="st">"Markov Lift"</span>))</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="st">"displayName"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_lift)) {</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    top_lift <span class="sc">|&gt;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(targeted_id, displayName, player_rate, markov_lift) <span class="sc">|&gt;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"Success Rate"</span>, <span class="st">"Markov Lift"</span>))</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    top_lift <span class="sc">|&gt;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(targeted_id, player_rate, markov_lift) <span class="sc">|&gt;</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Success Rate"</span>, <span class="st">"Markov Lift"</span>))</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">ID</th>
+<th style="text-align: left;">Player</th>
+<th style="text-align: left;">Success Rate</th>
+<th style="text-align: left;">Markov Lift</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">56012</td>
+<td style="text-align: left;">Josh Whyle</td>
+<td style="text-align: left;">7.7%</td>
+<td style="text-align: left;">+6.2%</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">47896</td>
+<td style="text-align: left;">Justice Hill</td>
+<td style="text-align: left;">6.6%</td>
+<td style="text-align: left;">+5.1%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">55907</td>
+<td style="text-align: left;">Luke Musgrave</td>
+<td style="text-align: left;">5.8%</td>
+<td style="text-align: left;">+4.3%</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">56471</td>
+<td style="text-align: left;">Jake Bobo</td>
+<td style="text-align: left;">5.7%</td>
+<td style="text-align: left;">+4.2%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">47836</td>
+<td style="text-align: left;">Miles Sanders</td>
+<td style="text-align: left;">5.4%</td>
+<td style="text-align: left;">+3.9%</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(lift_bayes_path)) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  lift_bayes <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(lift_bayes_path) <span class="sc">|&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      <span class="at">player_rate_lower =</span> <span class="st">`</span><span class="at">player_rate_lower.2.5%</span><span class="st">`</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">player_rate_upper =</span> <span class="st">`</span><span class="at">player_rate_upper.97.5%</span><span class="st">`</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  top_lift_bayes <span class="ot">&lt;-</span> lift_bayes <span class="sc">|&gt;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">head</span>(<span class="dv">5</span>) <span class="sc">|&gt;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">player_rate =</span> <span class="fu">paste0</span>(<span class="fu">round</span>(player_rate_mean <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>), <span class="st">"%"</span>),</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">cr_interval =</span> <span class="fu">paste0</span>(</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="st">"["</span>, <span class="fu">round</span>(player_rate_lower <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>), <span class="st">"%, "</span>,</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="fu">round</span>(player_rate_upper <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">1</span>), <span class="st">"%]"</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_lift_bayes)) {</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    top_lift_bayes <span class="sc">|&gt;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(targeted_id, targeted_name, player_rate, cr_interval) <span class="sc">|&gt;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"Break-Open Rate"</span>, <span class="st">"95% CrI"</span>))</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="st">"displayName"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_lift_bayes)) {</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    top_lift_bayes <span class="sc">|&gt;</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(targeted_id, displayName, player_rate, cr_interval) <span class="sc">|&gt;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"Break-Open Rate"</span>, <span class="st">"95% CrI"</span>))</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    top_lift_bayes <span class="sc">|&gt;</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(targeted_id, player_rate, cr_interval) <span class="sc">|&gt;</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Break-Open Rate"</span>, <span class="st">"95% CrI"</span>))</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">ID</th>
+<th style="text-align: left;">Player</th>
+<th style="text-align: left;">Break-Open Rate</th>
+<th style="text-align: left;">95% CrI</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">43454</td>
+<td style="text-align: left;">Tyreek Hill</td>
+<td style="text-align: left;">1747.5%</td>
+<td style="text-align: left;">[1198.5%, 2477.8%]</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">52425</td>
+<td style="text-align: left;">CeeDee Lamb</td>
+<td style="text-align: left;">1596.9%</td>
+<td style="text-align: left;">[1083.6%, 2220.6%]</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">54476</td>
+<td style="text-align: left;">Chris Olave</td>
+<td style="text-align: left;">1560.9%</td>
+<td style="text-align: left;">[1070.2%, 2163.2%]</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">41233</td>
+<td style="text-align: left;">Mike Evans</td>
+<td style="text-align: left;">1548.9%</td>
+<td style="text-align: left;">[1042.6%, 2176.9%]</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">39973</td>
+<td style="text-align: left;">DeAndre Hopkins</td>
+<td style="text-align: left;">1482.5%</td>
+<td style="text-align: left;">[995.2%, 2092.4%]</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>Receivers at the top of these tables often show Markov Lift values of several percentage points—for example, a player who breaks open 6.2% more often than league average on a per‑frame basis. The Bayesian table shows that many of these elevated break‑open rates remain above league average even after accounting for uncertainty, with wider intervals for low‑volume receivers and tighter intervals for high‑volume, consistently open separators.</p>
+</section>
+<section id="predictive-modeling-xgboost" class="level3">
+<h3 class="anchored" data-anchor-id="predictive-modeling-xgboost">4.4 Predictive Modeling (XGBoost)</h3>
+<p>Our XGBoost model predicts final separation (d_{catch}) using pre‑throw information. On the held‑out test set, the model attains an RMSE of <strong>1.92 yards</strong>, meaning that predictions are typically within about two yards of the observed separation. While this is not precise enough to predict the exact contest level on every single play, it is sufficient to:</p>
+<ul>
+<li>Distinguish genuinely wide‑open looks from tightly contested targets.</li>
+<li>Identify situations (route and coverage combinations, air‑time regimes) that tend to generate open throws.</li>
+</ul>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../figures/feature_importance.png" class="img-fluid figure-img"></p>
+<figcaption>XGBoost Feature Importance</figcaption>
+</figure>
+</div>
+<p>Feature importance confirms that <strong>initial separation (d_{throw})</strong> is the dominant predictor, followed by <strong>air time</strong>. Contextual variables (e.g., route/coverage features) contribute additional explanatory power but with smaller marginal importance. The predicted vs.&nbsp;observed plot shows points clustered along the identity line with moderate scatter:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../figures/xgboost_pred_vs_observed.png" class="img-fluid figure-img"></p>
+<figcaption>XGBoost Predicted vs Observed</figcaption>
+</figure>
+</div>
+<p>This behavior is consistent with a noisy, high‑variance outcome where much of the remaining uncertainty reflects factors not fully captured in our features, such as precise ball placement, hand‑fighting downfield, and micro‑adjustments at the catch point.</p>
+</section>
+<section id="top-receivers-iasa-over-expected" class="level3">
+<h3 class="anchored" data-anchor-id="top-receivers-iasa-over-expected">4.5 Top Receivers (IASA Over Expected)</h3>
+<p>Finally, we leverage the mixed‑effects model to produce <strong>receiver‑level rankings</strong> based on IASA over expected. For each receiver with sufficient volume, we extract their estimated random effect (u_{}), which measures how much in‑air separation they add or lose relative to a context‑matched baseline.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>rankings_path <span class="ot">&lt;-</span> <span class="st">"../processed/receiver_rankings.csv"</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">file.exists</span>(rankings_path)) {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  rankings <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(rankings_path)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  top_rank <span class="ot">&lt;-</span> rankings <span class="sc">|&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">head</span>(<span class="dv">10</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank)) {</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    top_rank <span class="sc">|&gt;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, targeted_name, iasa_over_expected) <span class="sc">|&gt;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="st">"displayName"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank)) {</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    top_rank <span class="sc">|&gt;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, displayName, iasa_over_expected) <span class="sc">|&gt;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    top_rank <span class="sc">|&gt;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, iasa_over_expected) <span class="sc">|&gt;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">ID</th>
+<th style="text-align: left;">Player</th>
+<th style="text-align: right;">IASA Over Expected</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">46071</td>
+<td style="text-align: left;">Saquon Barkley</td>
+<td style="text-align: right;">0.564</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">43584</td>
+<td style="text-align: left;">Kalif Raymond</td>
+<td style="text-align: right;">0.291</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">44820</td>
+<td style="text-align: left;">Christian McCaffrey</td>
+<td style="text-align: right;">0.276</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">54528</td>
+<td style="text-align: left;">James Cook</td>
+<td style="text-align: right;">0.255</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">55920</td>
+<td style="text-align: left;">Rashee Rice</td>
+<td style="text-align: right;">0.243</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">40011</td>
+<td style="text-align: left;">Travis Kelce</td>
+<td style="text-align: right;">0.229</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">48233</td>
+<td style="text-align: left;">Alec Ingold</td>
+<td style="text-align: right;">0.216</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">52474</td>
+<td style="text-align: left;">Antonio Gibson</td>
+<td style="text-align: right;">0.214</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">46243</td>
+<td style="text-align: left;">Marquez Valdes-Scantling</td>
+<td style="text-align: right;">0.212</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">54476</td>
+<td style="text-align: left;">Chris Olave</td>
+<td style="text-align: right;">0.211</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>rankings_bayes_path <span class="ot">&lt;-</span> <span class="st">"../processed/receiver_rankings_bayes.csv"</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(rankings_bayes_path)) {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  rankings_bayes <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(rankings_bayes_path)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  top_rank_bayes <span class="ot">&lt;-</span> rankings_bayes <span class="sc">|&gt;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">head</span>(<span class="dv">10</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">iasa_mean =</span> <span class="fu">round</span>(iasa_over_expected_mean, <span class="dv">3</span>),</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">iasa_cri =</span> <span class="fu">paste0</span>(</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">"["</span>, <span class="fu">round</span>(iasa_over_expected_lower, <span class="dv">3</span>), <span class="st">", "</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="fu">round</span>(iasa_over_expected_upper, <span class="dv">3</span>), <span class="st">"]"</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank_bayes)) {</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    top_rank_bayes <span class="sc">|&gt;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, targeted_name, iasa_mean, iasa_cri) <span class="sc">|&gt;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"IASA OE (Mean)"</span>, <span class="st">"95% CrI"</span>))</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="st">"displayName"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank_bayes)) {</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    top_rank_bayes <span class="sc">|&gt;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, displayName, iasa_mean, iasa_cri) <span class="sc">|&gt;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"IASA OE (Mean)"</span>, <span class="st">"95% CrI"</span>))</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>    top_rank_bayes <span class="sc">|&gt;</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, iasa_mean, iasa_cri) <span class="sc">|&gt;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"IASA OE (Mean)"</span>, <span class="st">"95% CrI"</span>))</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">ID</th>
+<th style="text-align: left;">Player</th>
+<th style="text-align: right;">IASA OE (Mean)</th>
+<th style="text-align: left;">95% CrI</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">46071</td>
+<td style="text-align: left;">Saquon Barkley</td>
+<td style="text-align: right;">0.563</td>
+<td style="text-align: left;">[0.193, 0.974]</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">43584</td>
+<td style="text-align: left;">Kalif Raymond</td>
+<td style="text-align: right;">0.292</td>
+<td style="text-align: left;">[-0.043, 0.657]</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">44820</td>
+<td style="text-align: left;">Christian McCaffrey</td>
+<td style="text-align: right;">0.266</td>
+<td style="text-align: left;">[-0.031, 0.595]</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">54528</td>
+<td style="text-align: left;">James Cook</td>
+<td style="text-align: right;">0.254</td>
+<td style="text-align: left;">[-0.071, 0.61]</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">55920</td>
+<td style="text-align: left;">Rashee Rice</td>
+<td style="text-align: right;">0.244</td>
+<td style="text-align: left;">[-0.048, 0.543]</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">40011</td>
+<td style="text-align: left;">Travis Kelce</td>
+<td style="text-align: right;">0.227</td>
+<td style="text-align: left;">[-0.043, 0.51]</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">48233</td>
+<td style="text-align: left;">Alec Ingold</td>
+<td style="text-align: right;">0.219</td>
+<td style="text-align: left;">[-0.153, 0.614]</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">46243</td>
+<td style="text-align: left;">Marquez Valdes-Scantling</td>
+<td style="text-align: right;">0.214</td>
+<td style="text-align: left;">[-0.1, 0.556]</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">52474</td>
+<td style="text-align: left;">Antonio Gibson</td>
+<td style="text-align: right;">0.213</td>
+<td style="text-align: left;">[-0.113, 0.57]</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">53576</td>
+<td style="text-align: left;">Brevin Jordan</td>
+<td style="text-align: right;">0.210</td>
+<td style="text-align: left;">[-0.143, 0.59]</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>Receivers with large positive IASA‑over‑expected values consistently <strong>beat the model</strong>: even after accounting for air time, initial separation, and context, they end up more open at the catch than expected. The Bayesian rankings show that many of these positive effects are statistically well‑separated from zero, while players with few targets or borderline effects have much wider credible intervals, reflecting “boom‑bust” versus steady separator profiles. Conversely, receivers with negative values may rely more heavily on scheme or timing, tending to lose separation in the air relative to comparable situations. Comparing these rankings with Markov Lift highlights players who both <strong>gain net separation</strong> and <strong>frequently break open</strong> mid‑route.</p>
+</section>
+</section>
+<section id="discussion" class="level2">
+<h2 class="anchored" data-anchor-id="discussion">5. Discussion</h2>
+<p>Our multi‑method analysis paints a coherent picture of in‑air receiver movement in the NFL:</p>
+<ol type="1">
+<li><strong>Baseline dynamics</strong>: Most plays lose separation while the ball is in the air (average IASA −0.82 yards), especially on deeper, longer‑air‑time throws. This sets a challenging baseline: doing “better than zero” requires meaningful skill.</li>
+<li><strong>Skill vs.&nbsp;context</strong>: Mixed‑effects modeling shows that initial separation and air time explain a significant portion of IASA, but non‑trivial receiver‑level random effects remain, capturing genuine differences in in‑air separation skill.</li>
+<li><strong>Breaking open</strong>: Markov‑chain analysis reframes separation as a sequence of coverage states and reveals that elite receivers break open from tight/moderate coverage more often than league average. A player with, for example, +6.2 percentage points of Markov Lift is repeatedly creating windows the quarterback would not otherwise have, and the Bayesian version of this model shows which of these elevated rates remain clearly above league average once uncertainty is taken into account.</li>
+<li><strong>Predictability and design</strong>: The XGBoost model demonstrates that much of final separation is predictable from pre‑throw information, underscoring the role of <strong>play design and defensive structure</strong>. However, residual variation and receiver‑level effects indicate that individual skill still matters even in favorable or unfavorable contexts.</li>
+</ol>
+<p>Taken together, these results suggest that separation should be viewed as a <strong>dynamic, shared product</strong> of scheme, quarterback decision‑making, and receiver movement skill. IASA and Markov Lift help attribute credit within that shared process, while the Bayesian models add an explicit notion of <strong>risk–reward</strong> by distinguishing receivers with stable, tightly estimated advantages from those whose value comes with much wider uncertainty.</p>
+</section>
+<section id="limitations" class="level2">
+<h2 class="anchored" data-anchor-id="limitations">6. Limitations</h2>
+<p>Several limitations are important when interpreting our findings:</p>
+<ul>
+<li><strong>Single‑season sample</strong>: Our analysis uses one regular season (2023). Receiver skill and team schemes evolve over time, so multi‑year stability of IASA and Markov Lift remains an open question.</li>
+<li><strong>Tracking noise and event timing</strong>: Imperfect alignment of throw and catch frames, as well as small positional errors in tracking, introduce noise into both IASA and the frame‑level state sequences.</li>
+<li><strong>Context coverage</strong>: While we include route and coverage families and basic game context, we do not fully capture quarterback progression, protection quality, or detailed defensive techniques (e.g., bracket coverage, leverage calls).</li>
+<li><strong>Modeling assumptions</strong>: The linear mixed‑effects model assumes linear relationships and Gaussian random effects, and the Markov chain assumes first‑order dependence. Real routes may have longer memory and more complex, non‑linear patterns.</li>
+<li><strong>Attribution</strong>: Positive IASA and Markov Lift are attributed to receivers, but in practice they also reflect quarterback play, play‑calling, and opponent quality.</li>
+</ul>
+<p>These limitations do not invalidate our results but should temper over‑interpretation of individual rankings or model outputs.</p>
+</section>
+<section id="future-work" class="level2">
+<h2 class="anchored" data-anchor-id="future-work">7. Future Work</h2>
+<p>There are several promising directions to extend this work:</p>
+<ul>
+<li><strong>Route Types</strong>: Incorporate more granular route labels (e.g., go vs.&nbsp;curl vs.&nbsp;dig) as fixed effects or interaction terms to understand which route structures most reward in‑air separation skill.</li>
+<li><strong>Ball Location</strong>: Account explicitly for ball placement (underthrows, back‑shoulder throws, high/low targets), which can both enable and constrain how receivers create separation at the catch point.</li>
+<li><strong>Defensive Positioning</strong>: Enrich the feature set with defender orientation, speed, and leverage, allowing us to distinguish separation created by receiver movement from separation granted by defensive decisions.</li>
+<li><strong>Multi‑season Stability</strong>: Track IASA and Markov Lift over multiple seasons to assess stability and year‑to‑year persistence, which is critical for scouting and contract decisions.</li>
+<li><strong>Integration with Outcome Metrics</strong>: Link in‑air separation metrics more directly to catch probability, yards after catch, and EPA to quantify how much in‑air separation actually translates into on‑field value.</li>
+</ul>
+<p>By deepening the link between tracking data and on‑field decision‑making, these extensions could make IASA and Markov Lift even more actionable for teams and analysts.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

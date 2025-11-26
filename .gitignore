@@ -1,0 +1,12 @@
+# Ignore data files
+data/*.csv
+data/*.parquet
+data/*.rds
+.RData
+.Rhistory
+.DS_Store
+data/
+processed/mixed_effects_model_bayes.rds
+processed/receiver_rankings_bayes.csv
+processed/markov_lift_rankings_bayes.csv
+processed/
