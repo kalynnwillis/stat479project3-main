@@ -1945,7 +1945,7 @@ IASA_{\text{play}} = \beta_0
 </ol>
 <p><img src="../figures/iasa_vs_airtime.png" class="img-fluid" alt="IASA vs Air Time"> <img src="../figures/iasa_vs_dthrow.png" class="img-fluid" alt="IASA vs Initial Separation"></p>
 <p>Model diagnostics show that fitted vs.&nbsp;observed IASA align reasonably well and residuals are roughly centered and symmetric:</p>
-<p><img src="../figures/mixed_effects_fitted_vs_observed.png" class="img-fluid" alt="Mixed-Effects Fitted vs Observed"> <img src="../figures/mixed_effects_residuals_hist.png" class="img-fluid" alt="Mixed-Effects Residuals"></p>
+<p><img src="../src/figures/mixed_effects_fitted_vs_observed.png" class="img-fluid" alt="Mixed-Effects Fitted vs Observed"> <img src="../src/figures/mixed_effects_residuals_hist.png" class="img-fluid" alt="Mixed-Effects Residuals"></p>
 <p>These patterns suggest that the combination of air time, initial separation, and contextual covariates captures a meaningful portion of the variation in in‑air separation, while leaving room for receiver‑specific effects and unmeasured factors (e.g., quarterback ball placement, subtle contact downfield).</p>
 </section>
 <section id="markov-chain-analysis" class="level3">
@@ -2120,7 +2120,7 @@ IASA_{\text{play}} = \beta_0
 <p>Receivers at the top of these tables often show Markov Lift values of several percentage points—for example, a player who breaks open 6.2% more often than league average on a per‑frame basis. The Bayesian table shows that many of these elevated break‑open rates remain above league average even after accounting for uncertainty, with wider intervals for low‑volume receivers and tighter intervals for high‑volume, consistently open separators.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="../figures/markov_lift_bayes_intervals.png" class="img-fluid figure-img"></p>
+<p><img src="../src/figures/markov_lift_bayes_intervals.png" class="img-fluid figure-img"></p>
 <figcaption>Bayesian Markov Lift Intervals</figcaption>
 </figure>
 </div>
@@ -2136,8 +2136,15 @@ IASA_{\text{play}} = \beta_0
 <p>The model’s feature‑importance scores confirm that <strong>initial separation (d_{throw})</strong> is the dominant predictor, followed by <strong>air time</strong>. Contextual variables (e.g., route/coverage features) contribute additional explanatory power but with smaller marginal importance. The predicted vs.&nbsp;observed plot shows points clustered along the identity line with moderate scatter:</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="../figures/xgboost_pred_vs_observed.png" class="img-fluid figure-img"></p>
+<p><img src="../src/figures/xgboost_pred_vs_observed.png" class="img-fluid figure-img"></p>
 <figcaption>XGBoost Predicted vs Observed</figcaption>
+</figure>
+</div>
+<p>Feature importance from the fitted model is shown below, summarizing which inputs contribute most to predictive accuracy:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../figures/feature_importance.png" class="img-fluid figure-img"></p>
+<figcaption>XGBoost Feature Importance</figcaption>
 </figure>
 </div>
 <p>This behavior is consistent with a noisy, high‑variance outcome where much of the remaining uncertainty reflects factors not fully captured in our features, such as precise ball placement, hand‑fighting downfield, and micro‑adjustments at the catch point.</p>
@@ -2344,7 +2351,7 @@ IASA_{\text{play}} = \beta_0
 <p>Receivers with large positive IASA‑over‑expected values consistently <strong>beat the model</strong>: even after accounting for air time, initial separation, and context, they end up more open at the catch than expected. The Bayesian rankings show that many of these positive effects are statistically well‑separated from zero, while players with few targets or borderline effects have much wider credible intervals, reflecting “boom‑bust” versus steady separator profiles. Conversely, receivers with negative values may rely more heavily on scheme or timing, tending to lose separation in the air relative to comparable situations. Comparing these rankings with Markov Lift highlights players who both <strong>gain net separation</strong> and <strong>frequently break open</strong> mid‑route.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="../figures/receiver_iasa_bayes_intervals.png" class="img-fluid figure-img"></p>
+<p><img src="../src/figures/receiver_iasa_bayes_intervals.png" class="img-fluid figure-img"></p>
 <figcaption>Bayesian IASA Over Expected Intervals</figcaption>
 </figure>
 </div>
