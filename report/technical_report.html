@@ -156,7 +156,7 @@ window.Quarto = {
 <li><strong>Play‑level separation</strong>: For each targeted play, we identify the throw and catch (or arrival) frames, compute distance to the nearest defender each frame, and define IASA as the difference between separation at the catch and at the throw.</li>
 <li><strong>Separation dynamics</strong>: We discretize separation into four states and estimate a league‑wide transition matrix that describes how often receivers move between states frame‑to‑frame. We then compute <strong>Markov Lift</strong> for each receiver: how often they “break open” from tight/moderate to open/wide‑open relative to league average.</li>
 <li><strong>Context‑adjusted skill</strong>: We fit a linear mixed‑effects model for IASA that includes air time, initial separation, and contextual play features as fixed effects and receiver/game effects as random effects. The receiver‑level random effects define <strong>IASA over expected</strong>.</li>
-<li><strong>Predictive model</strong>: We train an XGBoost model to predict final separation using only pre‑throw information (including (d_{throw}), air time, and play context), and evaluate its performance on a held‑out test set.</li>
+<li><strong>Predictive model</strong>: We train an XGBoost model to predict final separation using only pre‑throw information (including <span class="math inline">\(d_{throw}\)</span>, air time, and play context), and evaluate its performance on a held‑out test set.</li>
 </ol>
 </section>
 <section id="main-findings" class="level3">
@@ -207,7 +207,7 @@ window.Quarto = {
 <h3 class="anchored" data-anchor-id="data-sources">2.1 Data Sources</h3>
 <p>We utilize tracking and play‑level data from the <strong>Big Data Bowl 2026</strong> release, covering the <strong>2023 NFL regular season (Weeks 1–18)</strong>. The key components are:</p>
 <ul>
-<li><strong>Tracking data</strong>: Frame‑level (x, y) positions for all players and the ball at 10 Hz.</li>
+<li><strong>Tracking data</strong>: Frame‑level <span class="math inline">\(x, y\)</span> positions for all players and the ball at 10 Hz.</li>
 <li><strong>Play metadata</strong>: Play descriptions, game context (down, distance, time, score), and offense/defense identifiers.</li>
 <li><strong>Targeted receiver information</strong>: Identifiers for the targeted receiver and event tags for the throw and the ball arrival (catch, pass breakup, or incompletion).</li>
 </ul>
@@ -304,8 +304,8 @@ window.Quarto = {
 </ul>
 <p>After these filters, our final dataset contains <strong>14,108 passing plays</strong>. For each play, we store:</p>
 <ul>
-<li>Separation at the throw ((d_{throw})).</li>
-<li>Separation at the catch or arrival ((d_{catch})).</li>
+<li>Separation at the throw (<span class="math inline">\(d_{throw}\)</span>).</li>
+<li>Separation at the catch or arrival (<span class="math inline">\(d_{catch}\)</span>).</li>
 <li>Air time (duration between throw and arrival).</li>
 <li>The full sequence of separation states (tight, moderate, open, wide open) during ball flight.</li>
 <li>Play‑level contextual variables used in our models (route/coverage families, box count, etc.).</li>
@@ -546,11 +546,11 @@ window.Quarto = {
 <p><span class="math display">\[
 IASA = d_{catch} - d_{throw},
 \]</span></p>
-<p>where (d_{throw}) is the distance (in yards) between the targeted receiver and the nearest defender at the throw frame, and (d_{catch}) is the corresponding distance at the ball‑arrival frame. Positive IASA indicates that the receiver <strong>gained separation</strong> while the ball was in the air, whereas negative IASA indicates that the defender <strong>closed the gap</strong>.</p>
+<p>where <span class="math inline">\(d_{throw}\)</span> is the distance (in yards) between the targeted receiver and the nearest defender at the throw frame, and <span class="math inline">\(d_{catch}\)</span> is the corresponding distance at the ball‑arrival frame. Positive IASA indicates that the receiver <strong>gained separation</strong> while the ball was in the air, whereas negative IASA indicates that the defender <strong>closed the gap</strong>.</p>
 <p>Interpreting IASA:</p>
 <ul>
-<li>A receiver with (IASA = +1.0) yard turned a marginally contested target ((d_{throw} = 2.5) yards) into a more open catch point ((d_{catch} = 3.5) yards).</li>
-<li>A receiver with (IASA = -1.5) yards may have started open but allowed a defender to re‑enter the passing lane by the catch.</li>
+<li>A receiver with <span class="math inline">\(IASA = +1.0\)</span> yard turned a marginally contested target (<span class="math inline">\(d_{throw} = 2.5\)</span> yards) into a more open catch point (<span class="math inline">\(d_{catch} = 3.5\)</span> yards).</li>
+<li>A receiver with <span class="math inline">\(IASA = -1.5\)</span> yards may have started open but allowed a defender to re‑enter the passing lane by the catch.</li>
 </ul>
 <p>IASA is intentionally simple: it summarizes the net change in separation over the ball’s flight, while our other methods (Markov Lift and mixed‑effects modeling) provide more nuanced views.</p>
 <div class="cell">
@@ -686,7 +686,7 @@ IASA = d_{catch} - d_{throw},
 <li><strong>S2 (Open)</strong>: 3–5 yards</li>
 <li><strong>S3 (Wide Open)</strong>: &gt; 5 yards</li>
 </ul>
-<p>For each targeted route, we observe a sequence of states ((S_t)_{t=1}^T) during ball flight. We model these transitions with a first‑order <strong>Markov chain</strong>, estimating the transition probabilities:</p>
+<p>For each targeted route, we observe a sequence of states <span class="math inline">\((S_t)_{t=1}^T\)</span> during ball flight. We model these transitions with a first‑order <strong>Markov chain</strong>, estimating the transition probabilities:</p>
 <p><span class="math display">\[
 P(S_{t+1} = j \mid S_t = i), \quad i, j \in \{0,1,2,3\}.
 \]</span></p>
@@ -696,7 +696,7 @@ P(S_{t+1} = j \mid S_t = i), \quad i, j \in \{0,1,2,3\}.
 p^{\text{league}}_{\text{break}} = P(S_{t+1} \in \{2,3\} \mid S_t \in \{0,1\})
 \]</span></p>
 <p>as the league‑average probability of “breaking open” in a single frame. Empirically, this baseline is <strong>1.49% per frame</strong>.</p>
-<p>For each receiver, we compute an analogous empirical probability (p^{}_{}) based on their frame‑level transitions. We then define <strong>Markov Lift</strong> as:</p>
+<p>For each receiver, we compute an analogous empirical probability <span class="math inline">\(p^{\text{player}}_{\text{break}}\)</span> based on their frame‑level transitions. We then define <strong>Markov Lift</strong> as:</p>
 <p><span class="math display">\[
 \text{Markov Lift} = p^{\text{player}}_{\text{break}} - p^{\text{league}}_{\text{break}}.
 \]</span></p>
@@ -1016,6 +1016,47 @@ p^{\text{league}}_{\text{break}} = P(S_{t+1} \in \{2,3\} \mid S_t \in \{0,1\})
 </details>
 </div>
 </section>
+<section id="predictors-and-rationale" class="level3">
+<h3 class="anchored" data-anchor-id="predictors-and-rationale">Predictors and Rationale</h3>
+<p>Our goal in the mixed‑effects model is to explain how much separation a receiver gains or loses while the ball is in the air. Each covariate is chosen to capture one of three ideas:</p>
+<ul>
+<li><strong>Opportunity for movement</strong>: how much time and space the receiver has to change leverage mid‑route.</li>
+<li><strong>Coverage difficulty</strong>: how constrained the receiver’s movement is by the defensive structure.</li>
+<li><strong>Route‑level context</strong>: how much in‑air adjustment a particular route concept naturally allows.</li>
+</ul>
+<section id="opportunity-variables" class="level4">
+<h4 class="anchored" data-anchor-id="opportunity-variables">Opportunity variables</h4>
+<p>These covariates describe the “canvas” on which in‑air separation can change:</p>
+<ul>
+<li><strong>Air Time (scaled)</strong>: Longer throws provide more frames for defenders to close and receivers to separate. Because separation change is inherently time‑dependent, controlling for air time prevents deep throws from being treated as “better” simply because they last longer.</li>
+<li><strong>Distance at Throw (scaled)</strong>: Starting leverage matters. A receiver who is already wide open at release should not be credited for “gaining” separation just because the defender begins far away.</li>
+<li><strong>Pass Length (scaled)</strong>: A proxy for route depth. Deeper routes differ systematically in defender recovery behavior, ball flight, and the amount of space receivers can work with.</li>
+</ul>
+</section>
+<section id="coverage-difficulty-variables" class="level4">
+<h4 class="anchored" data-anchor-id="coverage-difficulty-variables">Coverage difficulty variables</h4>
+<p>These terms represent how challenging the coverage environment is for creating separation:</p>
+<ul>
+<li><strong>Defenders in the Box (scaled)</strong>: Higher counts often correspond to tighter formations or heavier defensive fronts, which correlate with man coverage, press looks, or aggressive safety rotations that shape initial leverage and recovery angles.</li>
+<li><strong>Team coverage indicators (Man vs.&nbsp;Zone / coverage family)</strong>: Coverage scheme determines defender responsibilities. In man coverage, separation changes primarily reflect one‑on‑one matchups; in zone, they reflect how well receivers find and exploit space between defenders.</li>
+</ul>
+</section>
+<section id="routelevel-context" class="level4">
+<h4 class="anchored" data-anchor-id="routelevel-context">Route‑level context</h4>
+<p>Routes differ substantially in how much in‑air adjustment they permit:</p>
+<ul>
+<li><strong>Route of Targeted Receiver</strong>: A vertical “go” route offers more variance in in‑air separation than a shallow drag or quick out. Including route family prevents us from attributing route‑driven patterns (e.g., back‑shoulder fades, crossers vs.&nbsp;curls) to the receiver’s individual skill.</li>
+</ul>
+</section>
+<section id="random-effects" class="level4">
+<h4 class="anchored" data-anchor-id="random-effects">Random effects</h4>
+<p>Finally, we use random effects to respect the nested structure of the data:</p>
+<ul>
+<li><strong>Receiver random intercept <span class="math inline">\((1 \mid \text{targeted\_id})\)</span></strong>: Captures persistent, player‑specific deviations in IASA over expected after controlling for the fixed‑effect covariates—our notion of in‑air separation skill.</li>
+<li><strong>Game random intercept <span class="math inline">\((1 \mid \text{game\_id})\)</span></strong>: Accounts for shared game‑level conditions such as opponent quality, weather, and scheme tendencies that affect all plays within a game.</li>
+</ul>
+</section>
+</section>
 <section id="mixedeffects-model-for-iasa-over-expected" class="level3">
 <h3 class="anchored" data-anchor-id="mixedeffects-model-for-iasa-over-expected">3.3 Mixed‑Effects Model for IASA over Expected</h3>
 <p>Raw IASA conflates receiver skill with <strong>context</strong>: longer air‑time throws, high‑leverage downs, and certain route/coverage combinations are naturally harder environments in which to gain separation. To isolate receiver skill, we fit a <strong>linear mixed‑effects model</strong>:</p>
@@ -1030,13 +1071,13 @@ IASA_{\text{play}} = \beta_0
 \]</span></p>
 <p>where:</p>
 <ul>
-<li>(_{}) encodes contextual fixed effects (e.g., route family, coverage family, box count, down‑and‑distance).</li>
-<li>(u_{}) is a receiver‑level random effect capturing <strong>in‑air separation skill</strong> not explained by context.</li>
-<li>(u_{}) is a game‑level random effect capturing shared conditions within a game (e.g., weather, opponent tendencies).</li>
-<li>() is residual error.</li>
+<li><span class="math inline">\(\mathbf{x}_{\text{play}}\)</span> encodes contextual fixed effects (e.g., route family, coverage family, box count, down‑and‑distance).</li>
+<li><span class="math inline">\(u_{\text{receiver}}\)</span> is a receiver‑level random effect capturing <strong>in‑air separation skill</strong> not explained by context.</li>
+<li><span class="math inline">\(u_{\text{game}}\)</span> is a game‑level random effect capturing shared conditions within a game (e.g., weather, opponent tendencies).</li>
+<li><span class="math inline">\(\epsilon\)</span> is residual error.</li>
 </ul>
-<p>We estimate the model using standard mixed‑effects software and summarize receiver skill via <strong>IASA over expected</strong>, defined as the estimated receiver random effect (u_{}). Intuitively, a receiver with (u_{} = +0.4) tends to finish plays with roughly 0.4 yards more in‑air separation than expected, conditional on their route mix and situations; a receiver with (u_{} = -0.3) tends to lose additional separation relative to expectation.</p>
-<p>In our implementation, we standardize the continuous predictors (air time, (d_{throw}), pass length, and defenders in the box) before fitting, so the model is actually fit on scaled versions of these variables. The equation above is written in terms of the original units for interpretability, but the reported coefficients in the model summaries correspond to one‑standard‑deviation changes in each continuous predictor rather than one‑yard or one‑second changes.</p>
+<p>We estimate the model using standard mixed‑effects software and summarize receiver skill via <strong>IASA over expected</strong>, defined as the estimated receiver random effect <span class="math inline">\(u_{\text{receiver}}\)</span>. Intuitively, a receiver with <span class="math inline">\(u_{\text{receiver}} = +0.4\)</span> tends to finish plays with roughly 0.4 yards more in‑air separation than expected, conditional on their route mix and situations; a receiver with <span class="math inline">\(u_{\text{receiver}} = -0.3\)</span> tends to lose additional separation relative to expectation.</p>
+<p>In our implementation, we standardize the continuous predictors (air time, <span class="math inline">\(d_{throw}\)</span>, pass length, and defenders in the box) before fitting, so the model is actually fit on scaled versions of these variables. The equation above is written in terms of the original units for interpretability, but the reported coefficients in the model summaries correspond to one‑standard‑deviation changes in each continuous predictor rather than one‑yard or one‑second changes.</p>
 <p>To quantify uncertainty in these receiver effects, we also fit a <strong>Bayesian analogue</strong> of the mixed‑effects model using weakly informative priors on the fixed effects and on the receiver/game random‑effect standard deviations. This yields a posterior distribution for each receiver’s IASA over expected, from which we report posterior means and 95% credible intervals; players with few targets naturally have wider intervals, reflecting greater uncertainty in their estimated in‑air separation skill.</p>
 <p>Model diagnostics (fitted vs.&nbsp;observed IASA and residual distributions) are used to assess linearity, variance assumptions, and the contribution of random effects.</p>
 <div class="cell">
@@ -1381,9 +1422,9 @@ IASA_{\text{play}} = \beta_0
 </section>
 <section id="predictive-modeling-of-final-separation-xgboost" class="level3">
 <h3 class="anchored" data-anchor-id="predictive-modeling-of-final-separation-xgboost">3.4 Predictive Modeling of Final Separation (XGBoost)</h3>
-<p>While the mixed‑effects model attributes skill to receivers, we also ask a complementary question: <strong>given what we know at the throw, how much separation should we expect at the catch?</strong> To answer this, we fit a gradient‑boosted tree model (XGBoost) to predict (d_{catch}) using only pre‑throw or contemporaneous features, including:</p>
+<p>While the mixed‑effects model attributes skill to receivers, we also ask a complementary question: <strong>given what we know at the throw, how much separation should we expect at the catch?</strong> To answer this, we fit a gradient‑boosted tree model (XGBoost) to predict <span class="math inline">\(d_{catch}\)</span> using only pre‑throw or contemporaneous features, including:</p>
 <ul>
-<li>Initial separation (d_{throw}).</li>
+<li>Initial separation <span class="math inline">\(d_{throw}\)</span>.</li>
 <li>Air time.</li>
 <li>Play context (down, distance, field position).</li>
 <li>Aggregated route/coverage indicators and defensive structure variables.</li>
@@ -1940,8 +1981,8 @@ IASA_{\text{play}} = \beta_0
 <h3 class="anchored" data-anchor-id="drivers-of-separation-change">4.2 Drivers of Separation Change</h3>
 <p>The mixed‑effects model quantifies how air time, initial separation, and context relate to IASA. Two core drivers emerge:</p>
 <ol type="1">
-<li><strong>Air Time</strong>: Longer throws result in more lost separation. The estimated coefficient of approximately (_1 = -0.09) (yards per second of air time, (p &lt; 0.01)) implies that adding about half a second to a throw’s flight time costs, on average, an additional () yards of separation. This matches the intuition that deeper balls give defenders more time to recover.</li>
-<li><strong>Initial Separation</strong>: There is strong regression to the mean, with an estimated coefficient of (_2 ) ((p &lt; 0.001)). Routes that are very open at the throw tend to see some closure by the catch, while tightly contested throws occasionally drift toward more neutral separation.</li>
+<li><strong>Air Time</strong>: Longer throws result in more lost separation. The estimated coefficient of approximately <span class="math inline">\(\beta_1 = -0.09\)</span> (yards per second of air time, <span class="math inline">\(p &lt; 0.01\)</span>) implies that adding about half a second to a throw’s flight time costs, on average, an additional <span class="math inline">\(\approx 0.045\)</span> yards of separation. This matches the intuition that deeper balls give defenders more time to recover.</li>
+<li><strong>Initial Separation</strong>: There is strong regression to the mean, with an estimated coefficient of <span class="math inline">\(\beta_2 \approx -0.39\)</span> (<span class="math inline">\(p &lt; 0.001\)</span>). Routes that are very open at the throw tend to see some closure by the catch, while tightly contested throws occasionally drift toward more neutral separation.</li>
 </ol>
 <p><img src="../figures/iasa_vs_airtime.png" class="img-fluid" alt="IASA vs Air Time"> <img src="../figures/iasa_vs_dthrow.png" class="img-fluid" alt="IASA vs Initial Separation"></p>
 <p>Model diagnostics show that fitted vs.&nbsp;observed IASA align reasonably well and residuals are roughly centered and symmetric:</p>
@@ -2128,12 +2169,12 @@ IASA_{\text{play}} = \beta_0
 </section>
 <section id="predictive-modeling-xgboost" class="level3">
 <h3 class="anchored" data-anchor-id="predictive-modeling-xgboost">4.4 Predictive Modeling (XGBoost)</h3>
-<p>Our XGBoost model predicts final separation (d_{catch}) using pre‑throw information. On the held‑out test set, the model attains an RMSE of <strong>1.79 yards</strong>, meaning that predictions are typically within about two yards of the observed separation. While this is not precise enough to predict the exact contest level on every single play, it is sufficient to:</p>
+<p>Our XGBoost model predicts final separation <span class="math inline">\(d_{catch}\)</span> using pre‑throw information. On the held‑out test set, the model attains an RMSE of <strong>1.79 yards</strong>, meaning that predictions are typically within about two yards of the observed separation. While this is not precise enough to predict the exact contest level on every single play, it is sufficient to:</p>
 <ul>
 <li>Distinguish genuinely wide‑open looks from tightly contested targets.</li>
 <li>Identify situations (route and coverage combinations, air‑time regimes) that tend to generate open throws.</li>
 </ul>
-<p>The model’s feature‑importance scores confirm that <strong>initial separation (d_{throw})</strong> is the dominant predictor, followed by <strong>air time</strong>. Contextual variables (e.g., route/coverage features) contribute additional explanatory power but with smaller marginal importance. The predicted vs.&nbsp;observed plot shows points clustered along the identity line with moderate scatter:</p>
+<p>The model’s feature‑importance scores confirm that <strong>initial separation <span class="math inline">\(d_{throw}\)</span></strong> is the dominant predictor, followed by <strong>air time</strong>. Contextual variables (e.g., route/coverage features) contribute additional explanatory power but with smaller marginal importance. The predicted vs.&nbsp;observed plot shows points clustered along the identity line with moderate scatter:</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="../src/figures/xgboost_pred_vs_observed.png" class="img-fluid figure-img"></p>
@@ -2151,7 +2192,7 @@ IASA_{\text{play}} = \beta_0
 </section>
 <section id="top-receivers-iasa-over-expected" class="level3">
 <h3 class="anchored" data-anchor-id="top-receivers-iasa-over-expected">4.5 Top Receivers (IASA Over Expected)</h3>
-<p>Finally, we leverage the mixed‑effects model to produce <strong>receiver‑level rankings</strong> based on IASA over expected. For each receiver with sufficient volume, we extract their estimated random effect (u_{}), which measures how much in‑air separation they add or lose relative to a context‑matched baseline.</p>
+<p>Finally, we leverage the mixed‑effects model to produce <strong>receiver‑level rankings</strong> based on IASA over expected. For each receiver with sufficient volume, we extract their estimated random effect <span class="math inline">\(u_{\text{receiver}}\)</span>, which measures how much in‑air separation they add or lose relative to a context‑matched baseline.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
