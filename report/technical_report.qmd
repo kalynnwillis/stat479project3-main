@@ -893,6 +893,42 @@ if (sys.nframe() == 0) {
 }
 ```
 
+### Predictors and Rationale
+
+Our goal in the mixed‑effects model is to explain how much separation a receiver gains or loses while the ball is in the air. Each covariate is chosen to capture one of three ideas:
+
+- **Opportunity for movement**: how much time and space the receiver has to change leverage mid‑route.
+- **Coverage difficulty**: how constrained the receiver’s movement is by the defensive structure.
+- **Route‑level context**: how much in‑air adjustment a particular route concept naturally allows.
+
+#### Opportunity variables
+
+These covariates describe the “canvas” on which in‑air separation can change:
+
+- **Air Time (scaled)**: Longer throws provide more frames for defenders to close and receivers to separate. Because separation change is inherently time‑dependent, controlling for air time prevents deep throws from being treated as “better” simply because they last longer.
+- **Distance at Throw (scaled)**: Starting leverage matters. A receiver who is already wide open at release should not be credited for “gaining” separation just because the defender begins far away.
+- **Pass Length (scaled)**: A proxy for route depth. Deeper routes differ systematically in defender recovery behavior, ball flight, and the amount of space receivers can work with.
+
+#### Coverage difficulty variables
+
+These terms represent how challenging the coverage environment is for creating separation:
+
+- **Defenders in the Box (scaled)**: Higher counts often correspond to tighter formations or heavier defensive fronts, which correlate with man coverage, press looks, or aggressive safety rotations that shape initial leverage and recovery angles.
+- **Team coverage indicators (Man vs. Zone / coverage family)**: Coverage scheme determines defender responsibilities. In man coverage, separation changes primarily reflect one‑on‑one matchups; in zone, they reflect how well receivers find and exploit space between defenders.
+
+#### Route‑level context
+
+Routes differ substantially in how much in‑air adjustment they permit:
+
+- **Route of Targeted Receiver**: A vertical “go” route offers more variance in in‑air separation than a shallow drag or quick out. Including route family prevents us from attributing route‑driven patterns (e.g., back‑shoulder fades, crossers vs. curls) to the receiver’s individual skill.
+
+#### Random effects
+
+Finally, we use random effects to respect the nested structure of the data:
+
+- **Receiver random intercept \((1 \mid \text{targeted\_id})\)**: Captures persistent, player‑specific deviations in IASA over expected after controlling for the fixed‑effect covariates—our notion of in‑air separation skill.
+- **Game random intercept \((1 \mid \text{game\_id})\)**: Accounts for shared game‑level conditions such as opponent quality, weather, and scheme tendencies that affect all plays within a game.
+
 ### 3.3 Mixed‑Effects Model for IASA over Expected
 
 Raw IASA conflates receiver skill with **context**: longer air‑time throws, high‑leverage downs, and certain route/coverage combinations are naturally harder environments in which to gain separation. To isolate receiver skill, we fit a **linear mixed‑effects model**:
