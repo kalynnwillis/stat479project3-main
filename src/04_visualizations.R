@@ -132,6 +132,17 @@ plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
     return(NULL)
   }
 
+  # Handle both legacy and current column names for interval bounds
+  # Legacy CSVs may have `player_rate_lower.2.5%` / `player_rate_upper.97.5%`.
+  if ("player_rate_lower.2.5%" %in% names(lift_bayes) &&
+    !"player_rate_lower" %in% names(lift_bayes)) {
+    lift_bayes <- lift_bayes |>
+      dplyr::rename(
+        player_rate_lower = `player_rate_lower.2.5%`,
+        player_rate_upper = `player_rate_upper.97.5%`
+      )
+  }
+
   # Use player name when available
   if ("targeted_name" %in% names(lift_bayes)) {
     lift_bayes <- lift_bayes |>
@@ -153,8 +164,8 @@ plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
     geom_point(color = "#D55E00") +
     geom_errorbar(
       aes(
-        ymin = `player_rate_lower.2.5%`,
-        ymax = `player_rate_upper.97.5%`
+        ymin = player_rate_lower,
+        ymax = player_rate_upper
       ),
       width = 0
     ) +
@@ -169,14 +180,17 @@ plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
 }
 
 if (sys.nframe() == 0) {
-  # Determine input directory
-  if (dir.exists("processed")) {
-    PROC_DIR <- "processed"
-  } else if (dir.exists("../processed")) {
-    PROC_DIR <- "../processed"
+  # Source path helpers
+  if (file.exists("src/utils_paths.R")) {
+    source("src/utils_paths.R")
+  } else if (file.exists("utils_paths.R")) {
+    source("utils_paths.R")
   } else {
-    stop("Could not find 'processed' directory.")
+    stop("Could not find 'utils_paths.R'.")
   }
+
+  # Determine input directory
+  PROC_DIR <- get_proc_dir()
 
   analysis_path <- file.path(PROC_DIR, "analysis_full.rds")
   if (!file.exists(analysis_path)) {
@@ -200,20 +214,7 @@ if (sys.nframe() == 0) {
   }
 
   # Determine output directory
-  if (dir.exists("figures")) {
-    FIG_DIR <- "figures"
-  } else if (dir.exists("../figures")) {
-    FIG_DIR <- "../figures"
-  } else {
-    # Create if needed
-    if (file.exists("src/00_load_data.R")) {
-      dir.create("figures")
-      FIG_DIR <- "figures"
-    } else {
-      dir.create("../figures", showWarnings = FALSE)
-      FIG_DIR <- "../figures"
-    }
-  }
+  FIG_DIR <- get_fig_dir()
 
   p1 <- plot_iasa_distribution(df)
   ggsave(file.path(FIG_DIR, "iasa_distribution.png"), p1, width = 8, height = 5)

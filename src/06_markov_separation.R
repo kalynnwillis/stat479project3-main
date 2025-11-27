@@ -32,7 +32,7 @@ load_trajectories <- function(proc_dir = "processed") {
   message(paste("Loading", length(files), "trajectory files..."))
 
   map(files, readRDS) |>
-    list_rbind()
+    dplyr::bind_rows()
 }
 
 compute_transitions <- function(traj_df) {
@@ -229,13 +229,16 @@ extract_bayesian_markov_lift <- function(bayes_model, break_df, league_rate) {
 # --- Main Execution ---
 
 if (sys.nframe() == 0) {
-  if (dir.exists("processed")) {
-    PROC_DIR <- "processed"
-  } else if (dir.exists("../processed")) {
-    PROC_DIR <- "../processed"
+  # Source path helpers
+  if (file.exists("src/utils_paths.R")) {
+    source("src/utils_paths.R")
+  } else if (file.exists("utils_paths.R")) {
+    source("utils_paths.R")
   } else {
-    stop("Could not find 'processed' directory.")
+    stop("Could not find 'utils_paths.R'.")
   }
+
+  PROC_DIR <- get_proc_dir()
 
   message("Loading trajectories...")
   traj <- load_trajectories(PROC_DIR)
@@ -249,8 +252,8 @@ if (sys.nframe() == 0) {
 
   # Save plot
   p <- plot_transition_matrix(tm)
-  if (!dir.exists("figures")) dir.create("figures")
-  ggsave(file.path("figures", "markov_transitions.png"), p, width = 8, height = 6)
+  FIG_DIR <- get_fig_dir()
+  ggsave(file.path(FIG_DIR, "markov_transitions.png"), p, width = 8, height = 6)
 
   message("Computing Markov Lift for players...")
   features_df <- readRDS(file.path(PROC_DIR, "analysis_full.rds")) |>

@@ -1,7 +1,7 @@
 # 02_compute_IASA.R
 # Description: Compute In-Air Separation Added (IASA).
 # Formula: IASA = d_catch - d_throw
-# Interpretation: 
+# Interpretation:
 #   Positive IASA -> Gained separation (Good for WR)
 #   Negative IASA -> Lost separation (Good for DB)
 
@@ -18,30 +18,31 @@ compute_iasa <- function(play_features) {
 }
 
 if (sys.nframe() == 0) {
-  # Determine input/output directory
-  if (dir.exists("processed")) {
-    PROC_DIR <- "processed"
-  } else if (dir.exists("../processed")) {
-    PROC_DIR <- "../processed"
+  # Source path helpers
+  if (file.exists("src/utils_paths.R")) {
+    source("src/utils_paths.R")
+  } else if (file.exists("utils_paths.R")) {
+    source("utils_paths.R")
   } else {
-    stop("Could not find 'processed' directory.")
+    stop("Could not find 'utils_paths.R'.")
   }
+
+  # Determine input/output directory
+  PROC_DIR <- get_proc_dir()
 
   # Find all feature files
   feature_files <- list.files(PROC_DIR, pattern = "play_features_w[0-9]+\\.rds", full.names = TRUE)
-  
+
   if (length(feature_files) == 0) {
     stop(paste("No feature files found in", PROC_DIR, ". Run 01_engineer_features.R first."))
   }
-  
+
   message(paste("Found", length(feature_files), "feature files. Loading and combining..."))
-  
-  features <- feature_files |>
-    map(readRDS) |>
-    list_rbind()
-  
+
+  features <- purrr::map_dfr(feature_files, readRDS)
+
   message(paste("Total plays loaded:", nrow(features)))
-  
+
   message("Computing IASA and derived metrics...")
   analysis_df <- compute_iasa(features)
 
@@ -107,9 +108,9 @@ if (sys.nframe() == 0) {
       prop_positive = mean(IASA > 0, na.rm = TRUE),
       n_plays = n()
     )
-  
+
   print(summary_stats)
-  
+
   saveRDS(analysis_df, file.path(PROC_DIR, "analysis_full.rds"))
   message(paste("Saved analysis_full.rds to", PROC_DIR))
 }

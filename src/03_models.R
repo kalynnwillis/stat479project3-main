@@ -16,10 +16,10 @@ fit_mixed_effects_model <- function(data) {
   # - Random Effect: Receiver ID (The metric we want)
   # - Random Effect: Game ID (Game-specific conditions/weather)
 
-  message("Fitting Mixed-Effects Model: IASA ~ air_time + d_throw + pass_length + defenders_in_the_box +\n  team_coverage_man_zone + route_of_targeted_receiver + (1|targeted_id) + (1|game_id)...")
+  message("Fitting Mixed-Effects Model: IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +\n  team_coverage_man_zone + route_of_targeted_receiver + (1|targeted_id) + (1|game_id)...")
 
   m <- lmer(
-    IASA ~ air_time + d_throw + pass_length + defenders_in_the_box +
+    IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +
       team_coverage_man_zone + route_of_targeted_receiver +
       (1 | targeted_id) + (1 | game_id),
     data = data,
@@ -115,7 +115,14 @@ extract_bayesian_receiver_rankings <- function(bayes_model) {
     )
   })
 
-  summary_df <- list_rbind(summary_list)
+  summary_list <- purrr::compact(summary_list)
+
+  if (length(summary_list) == 0) {
+    warning("No valid posterior random effects found for targeted_id; skipping Bayesian receiver rankings.")
+    return(NULL)
+  }
+
+  summary_df <- dplyr::bind_rows(summary_list)
 
   if (is.null(summary_df) || nrow(summary_df) == 0) {
     warning("Could not locate any 'r_targeted_id' random effect columns in Bayesian draws; skipping Bayesian receiver rankings.")
@@ -129,14 +136,17 @@ extract_bayesian_receiver_rankings <- function(bayes_model) {
 # --- Main Execution ---
 
 if (sys.nframe() == 0) {
-  # Determine input/output directory
-  if (dir.exists("processed")) {
-    PROC_DIR <- "processed"
-  } else if (dir.exists("../processed")) {
-    PROC_DIR <- "../processed"
+  # Source path helpers
+  if (file.exists("src/utils_paths.R")) {
+    source("src/utils_paths.R")
+  } else if (file.exists("utils_paths.R")) {
+    source("utils_paths.R")
   } else {
-    stop("Could not find 'processed' directory.")
+    stop("Could not find 'utils_paths.R'.")
   }
+
+  # Determine input/output directory
+  PROC_DIR <- get_proc_dir()
 
   # Load FULL dataset
   analysis_path <- file.path(PROC_DIR, "analysis_full.rds")
@@ -192,7 +202,11 @@ if (sys.nframe() == 0) {
     filter(air_time >= 0) |> # Allow 0 air time? No, but >= just in case floating point issues
     mutate(
       targeted_id = as.factor(targeted_id),
-      game_id = as.factor(game_id)
+      game_id = as.factor(game_id),
+      air_time_scaled = scale(air_time)[, 1],
+      d_throw_scaled = scale(d_throw)[, 1],
+      pass_length_scaled = scale(pass_length)[, 1],
+      defenders_in_the_box_scaled = scale(defenders_in_the_box)[, 1]
     )
 
   message(paste("Fitting model on", nrow(df_model), "plays."))
@@ -203,6 +217,10 @@ if (sys.nframe() == 0) {
 
   # Fit Model
   mem_model <- fit_mixed_effects_model(df_model)
+
+  if (lme4::isSingular(mem_model)) {
+    message("Warning: mixed-effects model fit is singular.")
+  }
 
   # Print Summary
   print(summary(mem_model))
@@ -232,14 +250,7 @@ if (sys.nframe() == 0) {
   )
 
   # Determine figure directory
-  if (dir.exists("figures")) {
-    FIG_DIR <- "figures"
-  } else if (dir.exists("../figures")) {
-    FIG_DIR <- "../figures"
-  } else {
-    dir.create("../figures", showWarnings = FALSE)
-    FIG_DIR <- "../figures"
-  }
+  FIG_DIR <- get_fig_dir()
 
   p_fit <- ggplot(diag_df, aes(x = fitted, y = IASA)) +
     geom_point(alpha = 0.3, color = "#0072B2") +

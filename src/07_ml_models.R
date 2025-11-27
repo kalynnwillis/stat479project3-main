@@ -3,8 +3,11 @@
 # Goal: Predict d_catch (or IASA) using pre-throw features.
 
 library(tidyverse)
-library(xgboost)
-library(caret)
+
+if (!requireNamespace("xgboost", quietly = TRUE) ||
+  !requireNamespace("caret", quietly = TRUE)) {
+  stop("Packages 'xgboost' and 'caret' are required for 07_ml_models.R. Please install them.")
+}
 
 # --- Functions ---
 
@@ -12,10 +15,10 @@ prepare_ml_data <- function(analysis_df) {
   # Select features for ML
   # We want to predict d_catch (or IASA)
   # Features: core separation metrics + route / coverage / context
-  
+
   # Only use columns that actually exist (for robustness)
   desired_cols <- c(
-    "d_catch",      # target
+    "d_catch", # target
     "d_throw",
     "air_time",
     "pass_length",
@@ -31,9 +34,9 @@ prepare_ml_data <- function(analysis_df) {
     "pass_location_type",
     "dropback_type"
   )
-  
+
   available <- intersect(desired_cols, names(analysis_df))
-  
+
   ml_df <- analysis_df |>
     select(all_of(available)) |>
     # Ensure target is present
@@ -45,31 +48,31 @@ prepare_ml_data <- function(analysis_df) {
         ~ factor(replace_na(.x, "Unknown"))
       )
     )
-  
+
   ml_df
 }
 
 train_xgboost <- function(ml_df) {
   # Split Data
   set.seed(123)
-  train_index <- createDataPartition(ml_df$d_catch, p = 0.8, list = FALSE)
+  train_index <- caret::createDataPartition(ml_df$d_catch, p = 0.8, list = FALSE)
   train_data <- ml_df[train_index, ]
-  test_data  <- ml_df[-train_index, ]
-  
+  test_data <- ml_df[-train_index, ]
+
   # Matrix format for XGBoost (one-hot encode factors)
   train_matrix <- model.matrix(d_catch ~ . - 1, data = train_data)
-  test_matrix  <- model.matrix(d_catch ~ . - 1, data = test_data)
-  
-  dtrain <- xgb.DMatrix(
+  test_matrix <- model.matrix(d_catch ~ . - 1, data = test_data)
+
+  dtrain <- xgboost::xgb.DMatrix(
     data = train_matrix,
     label = train_data$d_catch
   )
-  
-  dtest <- xgb.DMatrix(
+
+  dtest <- xgboost::xgb.DMatrix(
     data = test_matrix,
     label = test_data$d_catch
   )
-  
+
   # Parameters
   params <- list(
     objective = "reg:squarederror",
@@ -78,10 +81,10 @@ train_xgboost <- function(ml_df) {
     subsample = 0.8,
     colsample_bytree = 0.8
   )
-  
+
   # Train
   message("Training XGBoost model...")
-  model <- xgb.train(
+  model <- xgboost::xgb.train(
     params = params,
     data = dtrain,
     nrounds = 100,
@@ -89,27 +92,27 @@ train_xgboost <- function(ml_df) {
     print_every_n = 10,
     early_stopping_rounds = 10
   )
-  
+
   # Feature Importance
-  importance <- xgb.importance(model = model)
-  importance_plot <- xgb.plot.importance(importance_matrix = importance)
+  importance <- xgboost::xgb.importance(model = model)
+  importance_plot <- xgboost::xgb.plot.importance(importance_matrix = importance)
 
   # --- Validation metrics ---
   # Predictions on train and test
   pred_train <- predict(model, dtrain)
-  pred_test  <- predict(model, dtest)
+  pred_test <- predict(model, dtest)
 
   obs_train <- train_data$d_catch
-  obs_test  <- test_data$d_catch
+  obs_test <- test_data$d_catch
 
   rmse_train <- sqrt(mean((obs_train - pred_train)^2, na.rm = TRUE))
-  rmse_test  <- sqrt(mean((obs_test  - pred_test )^2, na.rm = TRUE))
+  rmse_test <- sqrt(mean((obs_test - pred_test)^2, na.rm = TRUE))
 
   mae_train <- mean(abs(obs_train - pred_train), na.rm = TRUE)
-  mae_test  <- mean(abs(obs_test  - pred_test ), na.rm = TRUE)
+  mae_test <- mean(abs(obs_test - pred_test), na.rm = TRUE)
 
   r2_train <- 1 - var(obs_train - pred_train, na.rm = TRUE) / var(obs_train, na.rm = TRUE)
-  r2_test  <- 1 - var(obs_test  - pred_test,  na.rm = TRUE) / var(obs_test,  na.rm = TRUE)
+  r2_test <- 1 - var(obs_test - pred_test, na.rm = TRUE) / var(obs_test, na.rm = TRUE)
 
   metrics <- tibble(
     split  = c("train", "test"),
@@ -144,27 +147,31 @@ if (sys.nframe() == 0) {
   } else {
     stop("Could not find 'processed' directory.")
   }
-  
+
   analysis_path <- file.path(PROC_DIR, "analysis_full.rds")
   if (!file.exists(analysis_path)) stop("analysis_full.rds not found.")
-  
+
   df <- readRDS(analysis_path)
-  
+
   message("Preparing ML dataset...")
   ml_data <- prepare_ml_data(df)
-  
+
   res <- train_xgboost(ml_data)
-  
-  # Save Importance Plot
+
+  # Save Importance Plot (only if a ggplot object is returned)
   if (!dir.exists("figures")) dir.create("figures")
-  importance_fig <- res$importance_plot + ggplot2::theme_minimal(base_size = 14)
-  ggplot2::ggsave(
-    filename = file.path("figures", "feature_importance.png"),
-    plot = importance_fig,
-    width = 8,
-    height = 5,
-    dpi = 300
-  )
+  if (inherits(res$importance_plot, "ggplot")) {
+    importance_fig <- res$importance_plot + ggplot2::theme_minimal(base_size = 14)
+    ggplot2::ggsave(
+      filename = file.path("figures", "feature_importance.png"),
+      plot = importance_fig,
+      width = 8,
+      height = 5,
+      dpi = 300
+    )
+  } else {
+    message("Feature importance plot not available; skipping feature_importance.png.")
+  }
 
   # Predicted vs Observed plot (test set)
   p_pred <- ggplot(res$test_diag, aes(x = pred, y = obs)) +
@@ -184,9 +191,8 @@ if (sys.nframe() == 0) {
     height = 5,
     dpi = 300
   )
-  
+
   saveRDS(res$model, file.path(PROC_DIR, "xgboost_model.rds"))
   write_csv(res$metrics, file.path(PROC_DIR, "xgboost_metrics.csv"))
   message("Saved xgboost_model.rds, xgboost_metrics.csv, feature_importance.png, and xgboost_pred_vs_observed.png")
 }
-

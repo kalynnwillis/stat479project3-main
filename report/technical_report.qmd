@@ -33,7 +33,7 @@ Our analysis proceeds in four steps:
 
 League‑wide, receivers usually **lose separation** while the ball is in the air: the mean IASA is **−0.82 yards**, reflecting how defenders naturally close space on most throws, especially deeper passes with longer air time. Longer air time and larger initial separation are both associated with more negative IASA, consistent with regression to the mean and the extra time defenders have to recover. Despite this baseline, a subset of receivers consistently generate **positive IASA over expected**, adding separation even after accounting for route, coverage, and situational factors.
 
-From the Markov‑chain perspective, separation states are “sticky” from frame to frame, but **breaking open** from tight or moderate coverage is still observable and varies across players. The league‑wide probability of moving from a covered state (tight/moderate) to an open state (open/wide‑open) is **1.49% per frame**, while top receivers exceed this by several percentage points. Our predictive model attains an RMSE of **1.92 yards** for final separation and confirms that initial separation and air time are the dominant predictive features, with context variables providing incremental but smaller gains.
+From the Markov‑chain perspective, separation states are “sticky” from frame to frame, but **breaking open** from tight or moderate coverage is still observable and varies across players. The league‑wide probability of moving from a covered state (tight/moderate) to an open state (open/wide‑open) is **1.49% per frame**, while top receivers exceed this by several percentage points. Our predictive model attains an RMSE of **1.79 yards** for final separation and confirms that initial separation and air time are the dominant predictive features, with context variables providing incremental but smaller gains.
 
 ### Implications
 
@@ -282,6 +282,8 @@ where:
 - \(\epsilon\) is residual error.
 
 We estimate the model using standard mixed‑effects software and summarize receiver skill via **IASA over expected**, defined as the estimated receiver random effect \(u_{\text{receiver}}\). Intuitively, a receiver with \(u_{\text{receiver}} = +0.4\) tends to finish plays with roughly 0.4 yards more in‑air separation than expected, conditional on their route mix and situations; a receiver with \(u_{\text{receiver}} = -0.3\) tends to lose additional separation relative to expectation.
+
+In our implementation, we standardize the continuous predictors (air time, \(d_{throw}\), pass length, and defenders in the box) before fitting, so the model is actually fit on scaled versions of these variables. The equation above is written in terms of the original units for interpretability, but the reported coefficients in the model summaries correspond to one‑standard‑deviation changes in each continuous predictor rather than one‑yard or one‑second changes.
 
 To quantify uncertainty in these receiver effects, we also fit a **Bayesian analogue** of the mixed‑effects model using weakly informative priors on the fixed effects and on the receiver/game random‑effect standard deviations. This yields a posterior distribution for each receiver’s IASA over expected, from which we report posterior means and 95% credible intervals; players with few targets naturally have wider intervals, reflecting greater uncertainty in their estimated in‑air separation skill.
 
@@ -619,14 +621,12 @@ Figure: Posterior mean break‑open probabilities and 95% credible intervals for
 
 ### 4.4 Predictive Modeling (XGBoost)
 
-Our XGBoost model predicts final separation \(d_{catch}\) using pre‑throw information. On the held‑out test set, the model attains an RMSE of **1.92 yards**, meaning that predictions are typically within about two yards of the observed separation. While this is not precise enough to predict the exact contest level on every single play, it is sufficient to:
+Our XGBoost model predicts final separation \(d_{catch}\) using pre‑throw information. On the held‑out test set, the model attains an RMSE of **1.79 yards**, meaning that predictions are typically within about two yards of the observed separation. While this is not precise enough to predict the exact contest level on every single play, it is sufficient to:
 
 - Distinguish genuinely wide‑open looks from tightly contested targets.
 - Identify situations (route and coverage combinations, air‑time regimes) that tend to generate open throws.
 
-![XGBoost Feature Importance](../figures/feature_importance.png)
-
-Feature importance confirms that **initial separation \(d_{throw}\)** is the dominant predictor, followed by **air time**. Contextual variables (e.g., route/coverage features) contribute additional explanatory power but with smaller marginal importance. The predicted vs. observed plot shows points clustered along the identity line with moderate scatter:
+The model’s feature‑importance scores confirm that **initial separation \(d_{throw}\)** is the dominant predictor, followed by **air time**. Contextual variables (e.g., route/coverage features) contribute additional explanatory power but with smaller marginal importance. The predicted vs. observed plot shows points clustered along the identity line with moderate scatter:
 
 ![XGBoost Predicted vs Observed](../figures/xgboost_pred_vs_observed.png)
 
