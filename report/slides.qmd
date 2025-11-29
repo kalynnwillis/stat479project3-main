@@ -49,7 +49,7 @@ execute:
   - Identify the targeted receiver per play.
   - Compute separation to nearest defender at **throw** and **catch** and the full frame‑by‑frame trajectory.
 - **Step 2 – Define IASA**
-  - \(\text{IASA} = d_{\text{catch}} - d_{\text{throw}}\) for each target.
+  - IASA = (distance to nearest defender at **catch**) − (distance to nearest defender at **throw**) for each target.
 - **Step 3 – Separation states & Markov chain**
   - Discretize separation into **Tight / Moderate / Open / Wide Open**.
   - Model transitions between states frame‑to‑frame.
@@ -83,53 +83,53 @@ execute:
 - **Bayesian analogue**:
   - Same structure in a Bayesian mixed‑effects model for posterior means and **95% credible intervals** per receiver.
 
-## Main Results: Separation Dynamics
+## Main Results: Separation Dynamics & Key Drivers
 
 - **League baseline**:
   - Across ~14k passing plays, receivers usually **lose separation** while the ball is in the air.
   - Mean IASA is about **−0.82 yards**, with a long left tail of bigger separation losses.
-- **Interpretation**:
+- **Key interpretation**:
   - Doing “better than zero” is already hard; holding separation constant is often a win.
   - Raw separation‑at‑catch alone can be misleading without the in‑air context.
-- **Figure**:
-  - ![](../figures/iasa_distribution.png){width=70%}
-
-## Main Results: Drivers of Separation Change – Air Time
-
-- **Air time**:
-  - Longer throws are associated with **more negative IASA**.
-  - Matches intuition: deeper balls give defenders more time to recover and close separation.
-- **Diagnostics**:
-  - Fitted vs. observed IASA cluster around the identity line; residuals are roughly centered and symmetric.
-
-![](../figures/iasa_vs_airtime.png){width=70%}
-
-## Main Results: Drivers of Separation Change – Initial Separation
-
-- **Initial separation**:
-  - Strong **regression to the mean**: very open throws tend to tighten; tightly contested throws sometimes drift toward neutral.
-- **Interpretation**:
+- **Drivers of separation change**:
+  - **Air time**: longer throws are associated with **more negative IASA**; deeper balls give defenders more time to recover and close separation.
+  - **Initial separation**: strong **regression to the mean**—very open throws tend to tighten, while tightly contested throws sometimes drift toward neutral.
   - Receivers who start wide open still have to “hold serve” against closing defenders; small positive IASA on these plays can be meaningful.
+- **Figures**:
 
-![](../figures/iasa_vs_dthrow.png){width=70%}
+:::: {.columns}
+:::: {.column width="50%"}
+IASA distribution across plays  
+![](../figures/iasa_distribution.png)
+::::
+:::: {.column width="50%"}
+IASA vs. air time  
+![](../figures/iasa_vs_airtime.png)
+::::
+::::
 
-## Main Results: Markov Lift – League Dynamics
-
+## Main Results: Markov Lift – League & Top Receivers
+ 
 - **League transition behavior**:
   - States are **sticky** from frame to frame, especially S2 (Open) and S3 (Wide Open).
   - Non‑trivial movement from covered to open occurs but is rare per frame.
 - **Break‑open baseline**:
   - From the Markov matrix, league‑average **break‑open probability** (S0/S1 → S2/S3) is about **1.49% per frame**.
-
-![](../figures/markov_transitions.png){width=65%}
-
-## Main Results: Markov Lift – Top Receivers
-
 - **Markov Lift interpretation**:
   - Markov Lift measures how many **percentage points above/below** the league break‑open baseline a receiver sits.
   - Positive values identify players who repeatedly convert tight/moderate coverage into open windows.
+- **Figures**:
 
-![](../figures/markov_lift_bayes_intervals.png){width=70%}
+:::: {.columns}
+:::: {.column width="50%"}
+League transition matrix and break‑open baseline  
+![](../figures/markov_transitions.png)
+::::
+:::: {.column width="50%"}
+Top receivers’ Markov Lift (Bayesian intervals)  
+![](../figures/markov_lift_bayes_intervals.png)
+::::
+::::
 
 ## Main Results: IASA Over Expected & Predictive Model
 
