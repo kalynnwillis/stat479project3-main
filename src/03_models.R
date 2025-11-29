@@ -16,11 +16,11 @@ fit_mixed_effects_model <- function(data) {
   # - Random Effect: Receiver ID (The metric we want)
   # - Random Effect: Game ID (Game-specific conditions/weather)
 
-  message("Fitting Mixed-Effects Model: IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +\n  team_coverage_man_zone + route_of_targeted_receiver + (1|targeted_id) + (1|game_id)...")
+  message("Fitting Mixed-Effects Model: IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +\n  team_coverage_man_zone + route_of_targeted_receiver + targeted_position + (1|targeted_id) + (1|game_id)...")
 
   m <- lmer(
     IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +
-      team_coverage_man_zone + route_of_targeted_receiver +
+      team_coverage_man_zone + route_of_targeted_receiver + targeted_position +
       (1 | targeted_id) + (1 | game_id),
     data = data,
     REML = FALSE
@@ -49,7 +49,7 @@ fit_bayesian_iasa_model <- function(data) {
 
   bayes_fit <- brms::brm(
     IASA ~ air_time + d_throw + pass_length + defenders_in_the_box +
-      team_coverage_man_zone + route_of_targeted_receiver +
+      team_coverage_man_zone + route_of_targeted_receiver + targeted_position +
       (1 | targeted_id) + (1 | game_id),
     data = data,
     family = gaussian(),
@@ -169,19 +169,38 @@ if (sys.nframe() == 0) {
   if (!"team_coverage_man_zone" %in% names(df)) df$team_coverage_man_zone <- NA_character_
   if (!"team_coverage_type" %in% names(df)) df$team_coverage_type <- NA_character_
 
+  # Ensure pass / position fields exist (needed for football-correct filtering)
+  if (!"pass_length" %in% names(df)) df$pass_length <- NA_real_
+  if (!"pass_result" %in% names(df)) df$pass_result <- NA_character_
+  if (!"targeted_position" %in% names(df)) df$targeted_position <- NA_character_
+
   df <- df |>
     mutate(
       offense_formation = factor(replace_na(offense_formation, "Unknown")),
       receiver_alignment = factor(replace_na(receiver_alignment, "Unknown")),
       route_of_targeted_receiver = factor(replace_na(route_of_targeted_receiver, "Unknown")),
       team_coverage_man_zone = factor(replace_na(team_coverage_man_zone, "Unknown")),
-      team_coverage_type = factor(replace_na(team_coverage_type, "Unknown"))
+      team_coverage_type = factor(replace_na(team_coverage_type, "Unknown")),
+      targeted_position = replace_na(targeted_position, "Unknown")
     )
 
-  # --- Debugging Missing Values ---
-  message(paste("Total rows loaded:", nrow(df)))
+  # --- Football-correct filtering (plays kept for modeling) ---
+  # 1) Forward passes only (screens / pitches dropped via pass_length > 0)
+  # 2) Route-running positions only (WR / TE)
 
-  missing_stats <- df |>
+  df_filtered <- df |>
+    filter(
+      !is.na(pass_length),
+      pass_length > 0,
+      targeted_position %in% c("WR", "TE")
+    )
+
+  message(paste("Total rows loaded:", nrow(df)))
+  message(paste("Rows after football filters (forward passes, WR/TE):", nrow(df_filtered)))
+
+  # --- Debugging Missing Values (post-filter) ---
+
+  missing_stats <- df_filtered |>
     summarise(
       missing_IASA = sum(is.na(IASA)),
       missing_air_time = sum(is.na(air_time)),
@@ -197,12 +216,13 @@ if (sys.nframe() == 0) {
 
   # Filter for valid data
   # IMPORTANT: Ensure targeted_id is a factor for random effects
-  df_model <- df |>
+  df_model <- df_filtered |>
     drop_na(IASA, air_time, d_throw, targeted_id, pass_length, defenders_in_the_box) |>
     filter(air_time >= 0) |> # Allow 0 air time? No, but >= just in case floating point issues
     mutate(
       targeted_id = as.factor(targeted_id),
       game_id = as.factor(game_id),
+      targeted_position = factor(targeted_position),
       air_time_scaled = scale(air_time)[, 1],
       d_throw_scaled = scale(d_throw)[, 1],
       pass_length_scaled = scale(pass_length)[, 1],
@@ -286,46 +306,59 @@ if (sys.nframe() == 0) {
   # Extract and Save Rankings
   rankings <- extract_receiver_rankings(mem_model)
 
-  # Join with player names from analysis data if available
-  if ("targeted_name" %in% names(df)) {
-    name_map <- df |>
-      distinct(targeted_id, targeted_name) |>
-      mutate(targeted_id = as.character(targeted_id))
+  # Target counts (forward-pass targets per receiver used in modeling)
+  target_counts <- df_model |>
+    group_by(targeted_id) |>
+    summarise(
+      n_targets = n(),
+      .groups = "drop"
+    ) |>
+    mutate(targeted_id = as.character(targeted_id))
 
-    rankings <- rankings |>
-      left_join(name_map, by = c("nfl_id" = "targeted_id")) |>
-      relocate(targeted_name, .before = nfl_id)
-  }
+  # Join with player names / positions from the (filtered) analysis data if available
+  meta_map <- df_filtered |>
+    distinct(targeted_id, targeted_name, targeted_position) |>
+    mutate(targeted_id = as.character(targeted_id))
 
-  print(head(rankings, 10))
+  rankings_full <- rankings |>
+    left_join(meta_map, by = c("nfl_id" = "targeted_id")) |>
+    left_join(target_counts, by = c("nfl_id" = "targeted_id")) |>
+    relocate(targeted_name, .before = nfl_id) |>
+    relocate(targeted_position, .after = targeted_name)
+
+  rankings_qualified <- rankings_full |>
+    filter(n_targets >= 30) |>
+    arrange(desc(iasa_over_expected))
+
+  print(head(rankings_qualified, 10))
 
   # Fit Bayesian version of the mixed-effects model (if brms is available)
   bayes_model <- fit_bayesian_iasa_model(df_model)
   bayes_rankings <- extract_bayesian_receiver_rankings(bayes_model)
 
   if (!is.null(bayes_model) && !is.null(bayes_rankings)) {
-    if ("targeted_name" %in% names(df)) {
-      name_map <- df |>
-        distinct(targeted_id, targeted_name) |>
-        mutate(targeted_id = as.character(targeted_id))
+    bayes_rankings_full <- bayes_rankings |>
+      left_join(meta_map, by = c("nfl_id" = "targeted_id")) |>
+      left_join(target_counts, by = c("nfl_id" = "targeted_id")) |>
+      relocate(targeted_name, .before = nfl_id) |>
+      relocate(targeted_position, .after = targeted_name)
 
-      bayes_rankings <- bayes_rankings |>
-        left_join(name_map, by = c("nfl_id" = "targeted_id")) |>
-        relocate(targeted_name, .before = nfl_id)
-    }
+    bayes_rankings_qualified <- bayes_rankings_full |>
+      filter(n_targets >= 30) |>
+      arrange(desc(iasa_over_expected_mean))
 
     message("Bayesian mixed-effects model for IASA fit successfully.")
-    print(head(bayes_rankings, 10))
+    print(head(bayes_rankings_qualified, 10))
 
     saveRDS(bayes_model, file.path(PROC_DIR, "mixed_effects_model_bayes.rds"))
-    write_csv(bayes_rankings, file.path(PROC_DIR, "receiver_rankings_bayes.csv"))
+    write_csv(bayes_rankings_qualified, file.path(PROC_DIR, "receiver_rankings_bayes.csv"))
   } else {
     message("Bayesian IASA model not fit; skipping Bayesian rankings export.")
   }
 
   # Save outputs
   saveRDS(mem_model, file.path(PROC_DIR, "mixed_effects_model.rds"))
-  write_csv(rankings, file.path(PROC_DIR, "receiver_rankings.csv"))
+  write_csv(rankings_qualified, file.path(PROC_DIR, "receiver_rankings.csv"))
   write_csv(mem_metrics, file.path(PROC_DIR, "mixed_effects_metrics.csv"))
 
   message(paste("Saved model and rankings to", PROC_DIR))

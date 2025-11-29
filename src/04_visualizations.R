@@ -206,6 +206,18 @@ if (sys.nframe() == 0) {
 
   df <- readRDS(analysis_path)
 
+  # Optional: align visuals with modeling sample
+  # Keep only WR/TE targets on forward passes when fields are available
+  if (all(c("pass_length", "targeted_position") %in% names(df))) {
+    message("Filtering visuals to WR/TE forward-pass targets for consistency with modeling...")
+    df <- df |>
+      filter(
+        !is.na(pass_length),
+        pass_length > 0,
+        targeted_position %in% c("WR", "TE")
+      )
+  }
+
   # Check for missing IASA values
   missing_iasa <- sum(is.na(df$IASA))
   if (missing_iasa > 0) {

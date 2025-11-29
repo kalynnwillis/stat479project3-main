@@ -60,6 +60,14 @@ compute_play_separation <- function(gid, pid, input_df, output_df) {
 
   tr_name <- if (length(tr_name_vec) > 0) tr_name_vec[1] else NA_character_
 
+  # Targeted receiver position (from input CSV; e.g., WR/TE/RB/FB)
+  tr_pos_vec <- play_in |>
+    filter(nfl_id == tr_id) |>
+    distinct(player_position) |>
+    pull(player_position)
+
+  tr_pos <- if (length(tr_pos_vec) > 0) tr_pos_vec[1] else NA_character_
+
   # Identify Defenders
   defs_throw <- play_in |>
     filter(player_role == "Defensive coverage", frame_id == throw_frame)
@@ -122,6 +130,7 @@ compute_play_separation <- function(gid, pid, input_df, output_df) {
       play_id = pid,
       targeted_id = tr_id,
       targeted_name = tr_name,
+      targeted_position = tr_pos,
       throw_frame = throw_frame,
       catch_frame = catch_frame,
       d_throw = d_throw,

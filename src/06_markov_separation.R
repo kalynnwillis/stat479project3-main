@@ -243,8 +243,36 @@ if (sys.nframe() == 0) {
   message("Loading trajectories...")
   traj <- load_trajectories(PROC_DIR)
 
-  message("Computing transitions...")
-  trans <- compute_transitions(traj)
+  message("Computing Markov Lift for players (and league transition matrix)...")
+  raw_features <- readRDS(file.path(PROC_DIR, "analysis_full.rds"))
+
+  # Apply the same football filters used for IASA modeling where possible:
+  #   - Forward passes only (pass_length > 0)
+  #   - Route-running positions only (WR / TE)
+  if (!all(c("pass_length", "targeted_position") %in% names(raw_features))) {
+    warning("pass_length or targeted_position missing in analysis_full.rds; using all plays for Markov transitions and Lift.")
+
+    features_df <- raw_features |>
+      select(game_id, play_id, targeted_id)
+
+    # Transitions from all targeted plays
+    trans <- compute_transitions(traj)
+  } else {
+    features_df <- raw_features |>
+      filter(
+        !is.na(pass_length),
+        pass_length > 0,
+        targeted_position %in% c("WR", "TE")
+      ) |>
+      select(game_id, play_id, targeted_id, targeted_position, pass_length)
+
+    # Restrict trajectories / transitions to the same WR/TE forward-pass plays
+    valid_plays <- features_df |>
+      distinct(game_id, play_id)
+
+    trans <- compute_transitions(traj) |>
+      inner_join(valid_plays, by = c("game_id", "play_id"))
+  }
 
   message("Estimating league transition matrix...")
   tm <- estimate_transition_matrix(trans)
@@ -255,13 +283,10 @@ if (sys.nframe() == 0) {
   FIG_DIR <- get_fig_dir()
   ggsave(file.path(FIG_DIR, "markov_transitions.png"), p, width = 8, height = 6)
 
-  message("Computing Markov Lift for players...")
-  features_df <- readRDS(file.path(PROC_DIR, "analysis_full.rds")) |>
-    select(game_id, play_id, targeted_id)
   lift <- compute_markov_lift(trans, features_df)
 
   # Optionally add names if targeted_name is available in analysis data
-  df_names <- readRDS(file.path(PROC_DIR, "analysis_full.rds"))
+  df_names <- raw_features
   if ("targeted_name" %in% names(df_names)) {
     name_map <- df_names |>
       distinct(targeted_id, targeted_name) |>

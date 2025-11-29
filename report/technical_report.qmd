@@ -561,7 +561,7 @@ $$
 P(S_{t+1} = j \mid S_t = i), \quad i, j \in \{0,1,2,3\}.
 $$
 
-The league‑wide transition matrix captures how likely a receiver is to maintain or change separation from frame to frame. The diagonal elements reflect **state persistence**, while off‑diagonal elements represent gains or losses in separation.
+The league‑wide transition matrix captures how likely a receiver is to maintain or change separation from frame to frame. The diagonal elements reflect **state persistence**, while off‑diagonal elements represent gains or losses in separation. In our implementation we compute separation trajectories and transitions for **wide receivers and tight ends on forward‑pass targets**, aligning the Markov analysis with the sample used for our IASA skill modeling.
 
 We focus on transitions from **covered** states (S0, S1) to **open** states (S2, S3). Define:
 
@@ -954,6 +954,8 @@ We estimate the model using standard mixed‑effects software and summarize rece
 
 In our implementation, we standardize the continuous predictors (air time, $d_{throw}$, pass length, and defenders in the box) before fitting, so the model is actually fit on scaled versions of these variables. The equation above is written in terms of the original units for interpretability, but the reported coefficients in the model summaries correspond to one‑standard‑deviation changes in each continuous predictor rather than one‑yard or one‑second changes.
 
+For football interpretability, we **restrict the modeling sample to wide receivers and tight ends on forward passes** and include **position (WR vs. TE) as a fixed effect**, allowing baseline separation change to differ by role. All such targets are included in the mixed‑effects and Bayesian models (with partial pooling shrinking low‑volume players toward the league mean), while we later apply a minimum‑volume cutoff when displaying leaderboards.
+
 To quantify uncertainty in these receiver effects, we also fit a **Bayesian analogue** of the mixed‑effects model using weakly informative priors on the fixed effects and on the receiver/game random‑effect standard deviations. This yields a posterior distribution for each receiver’s IASA over expected, from which we report posterior means and 95% credible intervals; players with few targets naturally have wider intervals, reflecting greater uncertainty in their estimated in‑air separation skill.
 
 Model diagnostics (fitted vs. observed IASA and residual distributions) are used to assess linearity, variance assumptions, and the contribution of random effects.
@@ -981,11 +983,11 @@ fit_mixed_effects_model <- function(data) {
   # - Random Effect: Receiver ID (The metric we want)
   # - Random Effect: Game ID (Game-specific conditions/weather)
 
-  message("Fitting Mixed-Effects Model: IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +\n  team_coverage_man_zone + route_of_targeted_receiver + (1|targeted_id) + (1|game_id)...")
+  message("Fitting Mixed-Effects Model: IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +\n  team_coverage_man_zone + route_of_targeted_receiver + targeted_position + (1|targeted_id) + (1|game_id)...")
 
   m <- lmer(
     IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +
-      team_coverage_man_zone + route_of_targeted_receiver +
+      team_coverage_man_zone + route_of_targeted_receiver + targeted_position +
       (1 | targeted_id) + (1 | game_id),
     data = data,
     REML = FALSE
@@ -1014,7 +1016,7 @@ fit_bayesian_iasa_model <- function(data) {
 
   bayes_fit <- brms::brm(
     IASA ~ air_time + d_throw + pass_length + defenders_in_the_box +
-      team_coverage_man_zone + route_of_targeted_receiver +
+      team_coverage_man_zone + route_of_targeted_receiver + targeted_position +
       (1 | targeted_id) + (1 | game_id),
     data = data,
     family = gaussian(),
@@ -1856,8 +1858,8 @@ From a football perspective, this baseline matters: if most plays lose separatio
 
 The mixed‑effects model quantifies how air time, initial separation, and context relate to IASA. Two core drivers emerge:
 
-1. **Air Time**: Longer throws result in more lost separation. The estimated coefficient of approximately $\beta_1 = -0.09$ (yards per second of air time, $p < 0.01$) implies that adding about half a second to a throw’s flight time costs, on average, an additional $\approx 0.045$ yards of separation. This matches the intuition that deeper balls give defenders more time to recover.
-2. **Initial Separation**: There is strong regression to the mean, with an estimated coefficient of $\beta_2 \approx -0.39$ ($p < 0.001$). Routes that are very open at the throw tend to see some closure by the catch, while tightly contested throws occasionally drift toward more neutral separation.
+1. **Air Time**: Longer throws result in more lost separation. The estimated effect of air time is negative and statistically significant, matching the intuition that deeper balls give defenders more time to recover.
+2. **Initial Separation**: There is strong regression to the mean: routes that are very open at the throw tend to see some closure by the catch, while tightly contested throws occasionally drift toward more neutral separation.
 
 ![IASA vs Air Time](../figures/iasa_vs_airtime.png)
 ![IASA vs Initial Separation](../figures/iasa_vs_dthrow.png)
@@ -1913,6 +1915,11 @@ if (file.exists(lift_path)) {
       kable(col.names = c("ID", "Success Rate", "Markov Lift"))
   }
 }
+```
+
+In all mixed-effects IASA models, we **restrict the sample to wide receivers and tight ends** and include their position as a fixed effect. To avoid over‑interpreting small‑sample noise, we fit the mixed‑effects and Bayesian models on *all* WR/TE forward‑pass targets but restrict our published leaderboards to players with at least 30 such targets. This threshold ensures that IASA‑over‑expected estimates are supported by a meaningful number of plays, while low‑volume players are still handled appropriately via partial pooling (their random effects are shrunk toward the league average and their wide credible intervals reflect the greater uncertainty).
+
+```{r}
 
 if (file.exists(lift_bayes_path)) {
   lift_bayes <- read_csv(lift_bayes_path) |>
@@ -1974,6 +1981,8 @@ This behavior is consistent with a noisy, high‑variance outcome where much of 
 
 Finally, we leverage the mixed‑effects model to produce **receiver‑level rankings** based on IASA over expected. For each receiver with sufficient volume, we extract their estimated random effect $u_{\text{receiver}}$, which measures how much in‑air separation they add or lose relative to a context‑matched baseline.
 
+In line with our modeling setup, these leaderboards are restricted to **wide receivers and tight ends with at least 30 forward‑pass targets** in the 2023 regular season; lower‑volume players are still included in the model fits but not in the primary rankings tables.
+
 ```{r}
 #| label: load-rankings
 rankings_path <- "../processed/receiver_rankings.csv"
@@ -1983,7 +1992,15 @@ if(file.exists(rankings_path)) {
   top_rank <- rankings |>
     head(10)
 
-  if ("targeted_name" %in% names(top_rank)) {
+  if ("targeted_name" %in% names(top_rank) && "targeted_position" %in% names(top_rank)) {
+    top_rank |>
+      select(nfl_id, targeted_name, targeted_position, iasa_over_expected) |>
+      kable(col.names = c("ID", "Player", "Pos", "IASA Over Expected"), digits = 3)
+  } else if ("displayName" %in% names(top_rank) && "targeted_position" %in% names(top_rank)) {
+    top_rank |>
+      select(nfl_id, displayName, targeted_position, iasa_over_expected) |>
+      kable(col.names = c("ID", "Player", "Pos", "IASA Over Expected"), digits = 3)
+  } else if ("targeted_name" %in% names(top_rank)) {
     top_rank |>
       select(nfl_id, targeted_name, iasa_over_expected) |>
       kable(col.names = c("ID", "Player", "IASA Over Expected"), digits = 3)

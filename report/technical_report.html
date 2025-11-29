@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Eleanor Brothers, Kalynn Willis, Jasmine Peck">
-<meta name="dcterms.date" content="2025-11-27">
+<meta name="dcterms.date" content="2025-11-29">
 
 <title>Technical Report: Quantifying In-Air Receiver Movement</title>
 <style>
@@ -130,7 +130,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 27, 2025</p>
+      <p class="date">November 29, 2025</p>
     </div>
   </div>
   
@@ -690,7 +690,7 @@ IASA = d_{catch} - d_{throw},
 <p><span class="math display">\[
 P(S_{t+1} = j \mid S_t = i), \quad i, j \in \{0,1,2,3\}.
 \]</span></p>
-<p>The league‑wide transition matrix captures how likely a receiver is to maintain or change separation from frame to frame. The diagonal elements reflect <strong>state persistence</strong>, while off‑diagonal elements represent gains or losses in separation.</p>
+<p>The league‑wide transition matrix captures how likely a receiver is to maintain or change separation from frame to frame. The diagonal elements reflect <strong>state persistence</strong>, while off‑diagonal elements represent gains or losses in separation. In our implementation we compute separation trajectories and transitions for <strong>wide receivers and tight ends on forward‑pass targets</strong>, aligning the Markov analysis with the sample used for our IASA skill modeling.</p>
 <p>We focus on transitions from <strong>covered</strong> states (S0, S1) to <strong>open</strong> states (S2, S3). Define:</p>
 <p><span class="math display">\[
 p^{\text{league}}_{\text{break}} = P(S_{t+1} \in \{2,3\} \mid S_t \in \{0,1\})
@@ -1078,6 +1078,7 @@ IASA_{\text{play}} = \beta_0
 </ul>
 <p>We estimate the model using standard mixed‑effects software and summarize receiver skill via <strong>IASA over expected</strong>, defined as the estimated receiver random effect <span class="math inline">\(u_{\text{receiver}}\)</span>. Intuitively, a receiver with <span class="math inline">\(u_{\text{receiver}} = +0.4\)</span> tends to finish plays with roughly 0.4 yards more in‑air separation than expected, conditional on their route mix and situations; a receiver with <span class="math inline">\(u_{\text{receiver}} = -0.3\)</span> tends to lose additional separation relative to expectation.</p>
 <p>In our implementation, we standardize the continuous predictors (air time, <span class="math inline">\(d_{throw}\)</span>, pass length, and defenders in the box) before fitting, so the model is actually fit on scaled versions of these variables. The equation above is written in terms of the original units for interpretability, but the reported coefficients in the model summaries correspond to one‑standard‑deviation changes in each continuous predictor rather than one‑yard or one‑second changes.</p>
+<p>For football interpretability, we <strong>restrict the modeling sample to wide receivers and tight ends on forward passes</strong> and include <strong>position (WR vs.&nbsp;TE) as a fixed effect</strong>, allowing baseline separation change to differ by role. All such targets are included in the mixed‑effects and Bayesian models (with partial pooling shrinking low‑volume players toward the league mean), while we later apply a minimum‑volume cutoff when displaying leaderboards.</p>
 <p>To quantify uncertainty in these receiver effects, we also fit a <strong>Bayesian analogue</strong> of the mixed‑effects model using weakly informative priors on the fixed effects and on the receiver/game random‑effect standard deviations. This yields a posterior distribution for each receiver’s IASA over expected, from which we report posterior means and 95% credible intervals; players with few targets naturally have wider intervals, reflecting greater uncertainty in their estimated in‑air separation skill.</p>
 <p>Model diagnostics (fitted vs.&nbsp;observed IASA and residual distributions) are used to assess linearity, variance assumptions, and the contribution of random effects.</p>
 <div class="cell">
@@ -1103,11 +1104,11 @@ IASA_{\text{play}} = \beta_0
 <span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="co"># - Random Effect: Receiver ID (The metric we want)</span></span>
 <span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  <span class="co"># - Random Effect: Game ID (Game-specific conditions/weather)</span></span>
 <span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Fitting Mixed-Effects Model: IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +</span><span class="sc">\n</span><span class="st">  team_coverage_man_zone + route_of_targeted_receiver + (1|targeted_id) + (1|game_id)..."</span>)</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Fitting Mixed-Effects Model: IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +</span><span class="sc">\n</span><span class="st">  team_coverage_man_zone + route_of_targeted_receiver + targeted_position + (1|targeted_id) + (1|game_id)..."</span>)</span>
 <span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  m <span class="ot">&lt;-</span> <span class="fu">lmer</span>(</span>
 <span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>    IASA <span class="sc">~</span> air_time_scaled <span class="sc">+</span> d_throw_scaled <span class="sc">+</span> pass_length_scaled <span class="sc">+</span> defenders_in_the_box_scaled <span class="sc">+</span></span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>      team_coverage_man_zone <span class="sc">+</span> route_of_targeted_receiver <span class="sc">+</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>      team_coverage_man_zone <span class="sc">+</span> route_of_targeted_receiver <span class="sc">+</span> targeted_position <span class="sc">+</span></span>
 <span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>      (<span class="dv">1</span> <span class="sc">|</span> targeted_id) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> game_id),</span>
 <span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data,</span>
 <span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">REML =</span> <span class="cn">FALSE</span></span>
@@ -1136,7 +1137,7 @@ IASA_{\text{play}} = \beta_0
 <span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>  bayes_fit <span class="ot">&lt;-</span> brms<span class="sc">::</span><span class="fu">brm</span>(</span>
 <span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>    IASA <span class="sc">~</span> air_time <span class="sc">+</span> d_throw <span class="sc">+</span> pass_length <span class="sc">+</span> defenders_in_the_box <span class="sc">+</span></span>
-<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>      team_coverage_man_zone <span class="sc">+</span> route_of_targeted_receiver <span class="sc">+</span></span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>      team_coverage_man_zone <span class="sc">+</span> route_of_targeted_receiver <span class="sc">+</span> targeted_position <span class="sc">+</span></span>
 <span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>      (<span class="dv">1</span> <span class="sc">|</span> targeted_id) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> game_id),</span>
 <span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data,</span>
 <span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> <span class="fu">gaussian</span>(),</span>
@@ -1981,8 +1982,8 @@ IASA_{\text{play}} = \beta_0
 <h3 class="anchored" data-anchor-id="drivers-of-separation-change">4.2 Drivers of Separation Change</h3>
 <p>The mixed‑effects model quantifies how air time, initial separation, and context relate to IASA. Two core drivers emerge:</p>
 <ol type="1">
-<li><strong>Air Time</strong>: Longer throws result in more lost separation. The estimated coefficient of approximately <span class="math inline">\(\beta_1 = -0.09\)</span> (yards per second of air time, <span class="math inline">\(p &lt; 0.01\)</span>) implies that adding about half a second to a throw’s flight time costs, on average, an additional <span class="math inline">\(\approx 0.045\)</span> yards of separation. This matches the intuition that deeper balls give defenders more time to recover.</li>
-<li><strong>Initial Separation</strong>: There is strong regression to the mean, with an estimated coefficient of <span class="math inline">\(\beta_2 \approx -0.39\)</span> (<span class="math inline">\(p &lt; 0.001\)</span>). Routes that are very open at the throw tend to see some closure by the catch, while tightly contested throws occasionally drift toward more neutral separation.</li>
+<li><strong>Air Time</strong>: Longer throws result in more lost separation. The estimated effect of air time is negative and statistically significant, matching the intuition that deeper balls give defenders more time to recover.</li>
+<li><strong>Initial Separation</strong>: There is strong regression to the mean: routes that are very open at the throw tend to see some closure by the catch, while tightly contested throws occasionally drift toward more neutral separation.</li>
 </ol>
 <p><img src="../figures/iasa_vs_airtime.png" class="img-fluid" alt="IASA vs Air Time"> <img src="../figures/iasa_vs_dthrow.png" class="img-fluid" alt="IASA vs Initial Separation"></p>
 <p>Model diagnostics show that fitted vs.&nbsp;observed IASA align reasonably well and residuals are roughly centered and symmetric:</p>
@@ -2053,32 +2054,35 @@ IASA_{\text{play}} = \beta_0
 <td style="text-align: left;">+6.2%</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">47896</td>
-<td style="text-align: left;">Justice Hill</td>
-<td style="text-align: left;">6.6%</td>
-<td style="text-align: left;">+5.1%</td>
-</tr>
-<tr class="odd">
-<td style="text-align: right;">55907</td>
-<td style="text-align: left;">Luke Musgrave</td>
-<td style="text-align: left;">5.8%</td>
-<td style="text-align: left;">+4.3%</td>
-</tr>
-<tr class="even">
 <td style="text-align: right;">56471</td>
 <td style="text-align: left;">Jake Bobo</td>
 <td style="text-align: left;">5.7%</td>
 <td style="text-align: left;">+4.2%</td>
 </tr>
 <tr class="odd">
-<td style="text-align: right;">47836</td>
-<td style="text-align: left;">Miles Sanders</td>
-<td style="text-align: left;">5.4%</td>
-<td style="text-align: left;">+3.9%</td>
+<td style="text-align: right;">55907</td>
+<td style="text-align: left;">Luke Musgrave</td>
+<td style="text-align: left;">5.2%</td>
+<td style="text-align: left;">+3.7%</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">48471</td>
+<td style="text-align: left;">Trenton Irwin</td>
+<td style="text-align: left;">5.1%</td>
+<td style="text-align: left;">+3.6%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">53449</td>
+<td style="text-align: left;">Kadarius Toney</td>
+<td style="text-align: left;">4.8%</td>
+<td style="text-align: left;">+3.3%</td>
 </tr>
 </tbody>
 </table>
 </div>
+</div>
+<p>In all mixed-effects IASA models, we <strong>restrict the sample to wide receivers and tight ends</strong> and include their position as a fixed effect. To avoid over‑interpreting small‑sample noise, we fit the mixed‑effects and Bayesian models on <em>all</em> WR/TE forward‑pass targets but restrict our published leaderboards to players with at least 30 such targets. This threshold ensures that IASA‑over‑expected estimates are supported by a meaningful number of plays, while low‑volume players are still handled appropriately via partial pooling (their random effects are shrunk toward the league average and their wide credible intervals reflect the greater uncertainty).</p>
+<div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(lift_bayes_path)) {</span>
@@ -2127,32 +2131,32 @@ IASA_{\text{play}} = \beta_0
 <tr class="odd">
 <td style="text-align: right;">43454</td>
 <td style="text-align: left;">Tyreek Hill</td>
-<td style="text-align: left;">1748%</td>
-<td style="text-align: left;">[1223.4%, 2442.8%]</td>
+<td style="text-align: left;">1739.3%</td>
+<td style="text-align: left;">[1185.7%, 2444.3%]</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">52425</td>
 <td style="text-align: left;">CeeDee Lamb</td>
-<td style="text-align: left;">1591.5%</td>
-<td style="text-align: left;">[1076.4%, 2212.2%]</td>
+<td style="text-align: left;">1588.2%</td>
+<td style="text-align: left;">[1078.3%, 2196.5%]</td>
 </tr>
 <tr class="odd">
-<td style="text-align: right;">54476</td>
-<td style="text-align: left;">Chris Olave</td>
-<td style="text-align: left;">1565.3%</td>
-<td style="text-align: left;">[1058.2%, 2178.4%]</td>
-</tr>
-<tr class="even">
 <td style="text-align: right;">41233</td>
 <td style="text-align: left;">Mike Evans</td>
-<td style="text-align: left;">1546%</td>
-<td style="text-align: left;">[1053.3%, 2152.3%]</td>
+<td style="text-align: left;">1546.2%</td>
+<td style="text-align: left;">[1067.3%, 2152.8%]</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">54476</td>
+<td style="text-align: left;">Chris Olave</td>
+<td style="text-align: left;">1510.6%</td>
+<td style="text-align: left;">[1033.6%, 2123.4%]</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">39973</td>
 <td style="text-align: left;">DeAndre Hopkins</td>
-<td style="text-align: left;">1480.8%</td>
-<td style="text-align: left;">[1008.8%, 2110.5%]</td>
+<td style="text-align: left;">1485.4%</td>
+<td style="text-align: left;">[1010.4%, 2099.4%]</td>
 </tr>
 </tbody>
 </table>
@@ -2193,6 +2197,7 @@ IASA_{\text{play}} = \beta_0
 <section id="top-receivers-iasa-over-expected" class="level3">
 <h3 class="anchored" data-anchor-id="top-receivers-iasa-over-expected">4.5 Top Receivers (IASA Over Expected)</h3>
 <p>Finally, we leverage the mixed‑effects model to produce <strong>receiver‑level rankings</strong> based on IASA over expected. For each receiver with sufficient volume, we extract their estimated random effect <span class="math inline">\(u_{\text{receiver}}\)</span>, which measures how much in‑air separation they add or lose relative to a context‑matched baseline.</p>
+<p>In line with our modeling setup, these leaderboards are restricted to <strong>wide receivers and tight ends with at least 30 forward‑pass targets</strong> in the 2023 regular season; lower‑volume players are still included in the model fits but not in the primary rankings tables.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
@@ -2203,20 +2208,28 @@ IASA_{\text{play}} = \beta_0
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  top_rank <span class="ot">&lt;-</span> rankings <span class="sc">|&gt;</span></span>
 <span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">head</span>(<span class="dv">10</span>)</span>
 <span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank)) {</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank) <span class="sc">&amp;&amp;</span> <span class="st">"targeted_position"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank)) {</span>
 <span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    top_rank <span class="sc">|&gt;</span></span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, targeted_name, iasa_over_expected) <span class="sc">|&gt;</span></span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="st">"displayName"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank)) {</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, targeted_name, targeted_position, iasa_over_expected) <span class="sc">|&gt;</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"Pos"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="st">"displayName"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank) <span class="sc">&amp;&amp;</span> <span class="st">"targeted_position"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank)) {</span>
 <span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    top_rank <span class="sc">|&gt;</span></span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, displayName, iasa_over_expected) <span class="sc">|&gt;</span></span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, displayName, targeted_position, iasa_over_expected) <span class="sc">|&gt;</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"Pos"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank)) {</span>
 <span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    top_rank <span class="sc">|&gt;</span></span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, iasa_over_expected) <span class="sc">|&gt;</span></span>
-<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
-<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, targeted_name, iasa_over_expected) <span class="sc">|&gt;</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="st">"displayName"</span> <span class="sc">%in%</span> <span class="fu">names</span>(top_rank)) {</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    top_rank <span class="sc">|&gt;</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, displayName, iasa_over_expected) <span class="sc">|&gt;</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"Player"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>    top_rank <span class="sc">|&gt;</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(nfl_id, iasa_over_expected) <span class="sc">|&gt;</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>      <span class="fu">kable</span>(<span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"ID"</span>, <span class="st">"IASA Over Expected"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <table class="caption-top table table-sm table-striped small">
@@ -2224,59 +2237,70 @@ IASA_{\text{play}} = \beta_0
 <tr class="header">
 <th style="text-align: right;">ID</th>
 <th style="text-align: left;">Player</th>
+<th style="text-align: left;">Pos</th>
 <th style="text-align: right;">IASA Over Expected</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: right;">46071</td>
-<td style="text-align: left;">Saquon Barkley</td>
-<td style="text-align: right;">0.564</td>
-</tr>
-<tr class="even">
 <td style="text-align: right;">43584</td>
 <td style="text-align: left;">Kalif Raymond</td>
-<td style="text-align: right;">0.291</td>
-</tr>
-<tr class="odd">
-<td style="text-align: right;">44820</td>
-<td style="text-align: left;">Christian McCaffrey</td>
-<td style="text-align: right;">0.276</td>
+<td style="text-align: left;">WR</td>
+<td style="text-align: right;">0.234</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">54528</td>
-<td style="text-align: left;">James Cook</td>
-<td style="text-align: right;">0.255</td>
-</tr>
-<tr class="odd">
 <td style="text-align: right;">55920</td>
 <td style="text-align: left;">Rashee Rice</td>
-<td style="text-align: right;">0.243</td>
+<td style="text-align: left;">WR</td>
+<td style="text-align: right;">0.181</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: right;">40011</td>
 <td style="text-align: left;">Travis Kelce</td>
-<td style="text-align: right;">0.229</td>
-</tr>
-<tr class="odd">
-<td style="text-align: right;">48233</td>
-<td style="text-align: left;">Alec Ingold</td>
-<td style="text-align: right;">0.216</td>
+<td style="text-align: left;">TE</td>
+<td style="text-align: right;">0.180</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">52474</td>
-<td style="text-align: left;">Antonio Gibson</td>
-<td style="text-align: right;">0.214</td>
+<td style="text-align: right;">53463</td>
+<td style="text-align: left;">Elijah Moore</td>
+<td style="text-align: left;">WR</td>
+<td style="text-align: right;">0.179</td>
 </tr>
 <tr class="odd">
+<td style="text-align: right;">44881</td>
+<td style="text-align: left;">Cooper Kupp</td>
+<td style="text-align: left;">WR</td>
+<td style="text-align: right;">0.177</td>
+</tr>
+<tr class="even">
 <td style="text-align: right;">46243</td>
 <td style="text-align: left;">Marquez Valdes-Scantling</td>
-<td style="text-align: right;">0.212</td>
+<td style="text-align: left;">WR</td>
+<td style="text-align: right;">0.167</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: right;">54476</td>
 <td style="text-align: left;">Chris Olave</td>
-<td style="text-align: right;">0.211</td>
+<td style="text-align: left;">WR</td>
+<td style="text-align: right;">0.153</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">55944</td>
+<td style="text-align: left;">Josh Downs</td>
+<td style="text-align: left;">WR</td>
+<td style="text-align: right;">0.151</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">54499</td>
+<td style="text-align: left;">Christian Watson</td>
+<td style="text-align: left;">WR</td>
+<td style="text-align: right;">0.151</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">40488</td>
+<td style="text-align: left;">Adam Thielen</td>
+<td style="text-align: left;">WR</td>
+<td style="text-align: right;">0.144</td>
 </tr>
 </tbody>
 </table>
@@ -2326,64 +2350,64 @@ IASA_{\text{play}} = \beta_0
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: right;">46071</td>
-<td style="text-align: left;">Saquon Barkley</td>
-<td style="text-align: right;">0.563</td>
-<td style="text-align: left;">[0.197, 0.963]</td>
-</tr>
-<tr class="even">
 <td style="text-align: right;">43584</td>
 <td style="text-align: left;">Kalif Raymond</td>
-<td style="text-align: right;">0.291</td>
-<td style="text-align: left;">[-0.039, 0.658]</td>
-</tr>
-<tr class="odd">
-<td style="text-align: right;">44820</td>
-<td style="text-align: left;">Christian McCaffrey</td>
-<td style="text-align: right;">0.268</td>
-<td style="text-align: left;">[-0.032, 0.598]</td>
+<td style="text-align: right;">0.240</td>
+<td style="text-align: left;">[-0.047, 0.569]</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">54528</td>
-<td style="text-align: left;">James Cook</td>
-<td style="text-align: right;">0.255</td>
-<td style="text-align: left;">[-0.079, 0.611]</td>
-</tr>
-<tr class="odd">
 <td style="text-align: right;">55920</td>
 <td style="text-align: left;">Rashee Rice</td>
-<td style="text-align: right;">0.244</td>
-<td style="text-align: left;">[-0.047, 0.551]</td>
+<td style="text-align: right;">0.184</td>
+<td style="text-align: left;">[-0.06, 0.457]</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">53463</td>
+<td style="text-align: left;">Elijah Moore</td>
+<td style="text-align: right;">0.181</td>
+<td style="text-align: left;">[-0.064, 0.446]</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">40011</td>
 <td style="text-align: left;">Travis Kelce</td>
-<td style="text-align: right;">0.230</td>
-<td style="text-align: left;">[-0.039, 0.508]</td>
+<td style="text-align: right;">0.180</td>
+<td style="text-align: left;">[-0.056, 0.438]</td>
 </tr>
 <tr class="odd">
-<td style="text-align: right;">48233</td>
-<td style="text-align: left;">Alec Ingold</td>
-<td style="text-align: right;">0.221</td>
-<td style="text-align: left;">[-0.146, 0.612]</td>
+<td style="text-align: right;">44881</td>
+<td style="text-align: left;">Cooper Kupp</td>
+<td style="text-align: right;">0.179</td>
+<td style="text-align: left;">[-0.069, 0.444]</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">52474</td>
-<td style="text-align: left;">Antonio Gibson</td>
-<td style="text-align: right;">0.216</td>
-<td style="text-align: left;">[-0.119, 0.581]</td>
-</tr>
-<tr class="odd">
 <td style="text-align: right;">46243</td>
 <td style="text-align: left;">Marquez Valdes-Scantling</td>
-<td style="text-align: right;">0.212</td>
-<td style="text-align: left;">[-0.097, 0.548]</td>
+<td style="text-align: right;">0.172</td>
+<td style="text-align: left;">[-0.092, 0.478]</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">54499</td>
+<td style="text-align: left;">Christian Watson</td>
+<td style="text-align: right;">0.154</td>
+<td style="text-align: left;">[-0.11, 0.444]</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">53576</td>
-<td style="text-align: left;">Brevin Jordan</td>
-<td style="text-align: right;">0.211</td>
-<td style="text-align: left;">[-0.145, 0.6]</td>
+<td style="text-align: right;">55944</td>
+<td style="text-align: left;">Josh Downs</td>
+<td style="text-align: right;">0.154</td>
+<td style="text-align: left;">[-0.09, 0.424]</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">54476</td>
+<td style="text-align: left;">Chris Olave</td>
+<td style="text-align: right;">0.152</td>
+<td style="text-align: left;">[-0.064, 0.387]</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">40488</td>
+<td style="text-align: left;">Adam Thielen</td>
+<td style="text-align: right;">0.143</td>
+<td style="text-align: left;">[-0.078, 0.377]</td>
 </tr>
 </tbody>
 </table>
