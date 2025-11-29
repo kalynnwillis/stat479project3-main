@@ -1,0 +1,166 @@
+---
+title: "Quantifying In‑Air Receiver Movement"
+author: "Eleanor Brothers, Kalynn Willis, Jasmine Peck"
+format:
+  revealjs:
+    theme: default
+    slide-number: true
+    code-fold: false
+    css: slides.css
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+## Background: Why In‑Air Separation?
+
+- **Problem**: Traditional receiver metrics look at separation at **one instant** (throw or catch) and ignore what happens **while the ball is in the air**.
+- **Goal**: Measure how much separation a targeted receiver **gains or loses during ball flight**, not just how open they end up.
+- **Our metrics**:
+  - **In‑Air Separation Added (IASA)**: Change in nearest‑defender distance between throw and catch.
+  - **Markov Lift**: How often receivers **break open** from tight/moderate to open/wide‑open compared to league baseline.
+- **Why it matters**: Separates **route‑running craft** from pure **scheme and coverage busts**, which is directly useful for scouting, contracts, and play design.
+
+## Background: Football Examples
+
+- **Example 1 – Late win on a go route**
+  - WR starts covered, stacks the CB, creates separation just as the ball arrives.
+  - IASA is **positive**: separation gained in the air.
+- **Example 2 – Designed crosser**
+  - Scheme creates a wide‑open crosser at the throw, but a defender closes to contest the catch.
+  - IASA is **negative**: separation lost in the air despite good design.
+- **Key idea**: These plays may look similar at the catch, but their **in‑air stories** and skill implications are very different.
+
+## Background: Data & Scope
+
+- **Data source**: Big Data Bowl 2026 release, **2023 NFL regular season (Weeks 1–18)**.
+- **Tracking**: 10 Hz $x, y$ positions for all players and the ball.
+- **Units of analysis**:
+  - **Play‑level**: One IASA value per targeted pass.
+  - **Frame‑level**: Separation state each 0.1s during ball flight.
+- **Modeling sample**:
+  - Restrict to **forward passes** and **wide receivers + tight ends** (true route‑runners).
+  - Include all WR/TE forward‑pass targets in models; later require **≥30 targets** for leaderboards.
+
+## Analysis Overview: Pipeline
+
+- **Step 1 – Feature engineering**
+  - Identify the targeted receiver per play.
+  - Compute separation to nearest defender at **throw** and **catch** and the full frame‑by‑frame trajectory.
+- **Step 2 – Define IASA**
+  - \(\text{IASA} = d_{\text{catch}} - d_{\text{throw}}\) for each target.
+- **Step 3 – Separation states & Markov chain**
+  - Discretize separation into **Tight / Moderate / Open / Wide Open**.
+  - Model transitions between states frame‑to‑frame.
+- **Step 4 – Mixed‑effects modeling**
+  - Model IASA as a function of air time, initial separation, route, coverage, and **position**, with random effects for receiver and game.
+- **Step 5 – Predictive modeling**
+  - Train XGBoost to predict final separation from **pre‑throw** information only.
+
+## Analysis Overview: IASA & Markov States
+
+- **IASA (play‑level)**:
+  - Summarizes **net separation change** between throw and arrival.
+  - Positive = separation gained; negative = separation lost.
+- **Separation states (frame‑level)**:
+  - S0 \< 1 yard (Tight), S1 1–3 (Moderate), S2 3–5 (Open), S3 \> 5 (Wide Open).
+  - Used to understand **how often** receivers move between coverage states.
+- **Markov Lift**:
+  - League baseline break‑open probability from S0/S1 to S2/S3 is about **1.49% per frame**.
+  - Markov Lift measures how many **percentage points above/below** this baseline each receiver sits.
+
+## Analysis Overview: Modeling Choices
+
+- **Mixed‑effects IASA model**:
+  - **Fixed effects**: air time, initial separation, pass length, defenders in the box, route family, coverage family, **position (WR vs. TE)**.
+  - **Random effects**: receiver ID and game ID.
+  - Response: IASA per targeted play (WR/TE, forward passes only).
+- **Football‑motivated filters**:
+  - Remove shovels/screens/laterals via **pass length \> 0**.
+  - Restrict to **WR/TE** to avoid FB/RB dump‑off inflation.
+  - Use **all** such targets in the model; apply **≥30‑target cutoff only when ranking** receivers.
+- **Bayesian analogue**:
+  - Same structure in a Bayesian mixed‑effects model for posterior means and **95% credible intervals** per receiver.
+
+## Main Results: Separation Dynamics
+
+- **League baseline**:
+  - Across ~14k passing plays, receivers usually **lose separation** while the ball is in the air.
+  - Mean IASA is about **−0.82 yards**, with a long left tail of bigger separation losses.
+- **Interpretation**:
+  - Doing “better than zero” is already hard; holding separation constant is often a win.
+  - Raw separation‑at‑catch alone can be misleading without the in‑air context.
+- **Figure**:
+  - ![](../figures/iasa_distribution.png){width=70%}
+
+## Main Results: Drivers of Separation Change – Air Time
+
+- **Air time**:
+  - Longer throws are associated with **more negative IASA**.
+  - Matches intuition: deeper balls give defenders more time to recover and close separation.
+- **Diagnostics**:
+  - Fitted vs. observed IASA cluster around the identity line; residuals are roughly centered and symmetric.
+
+![](../figures/iasa_vs_airtime.png){width=70%}
+
+## Main Results: Drivers of Separation Change – Initial Separation
+
+- **Initial separation**:
+  - Strong **regression to the mean**: very open throws tend to tighten; tightly contested throws sometimes drift toward neutral.
+- **Interpretation**:
+  - Receivers who start wide open still have to “hold serve” against closing defenders; small positive IASA on these plays can be meaningful.
+
+![](../figures/iasa_vs_dthrow.png){width=70%}
+
+## Main Results: Markov Lift – League Dynamics
+
+- **League transition behavior**:
+  - States are **sticky** from frame to frame, especially S2 (Open) and S3 (Wide Open).
+  - Non‑trivial movement from covered to open occurs but is rare per frame.
+- **Break‑open baseline**:
+  - From the Markov matrix, league‑average **break‑open probability** (S0/S1 → S2/S3) is about **1.49% per frame**.
+
+![](../figures/markov_transitions.png){width=65%}
+
+## Main Results: Markov Lift – Top Receivers
+
+- **Markov Lift interpretation**:
+  - Markov Lift measures how many **percentage points above/below** the league break‑open baseline a receiver sits.
+  - Positive values identify players who repeatedly convert tight/moderate coverage into open windows.
+
+![](../figures/markov_lift_bayes_intervals.png){width=70%}
+
+## Main Results: IASA Over Expected & Predictive Model
+
+- **Top IASA‑over‑expected receivers (Bayesian mixed‑effects)**:
+  - Among WR/TE with **≥30 forward‑pass targets**, leaders include **Kalif Raymond (+0.24 yds/target)**, **Rashee Rice (+0.18)**, **Elijah Moore (+0.18)**, **Travis Kelce (+0.18)**, and **Cooper Kupp (+0.18)**.
+  - High‑volume stars like **Tyreek Hill**, **CeeDee Lamb**, and **Amon‑Ra St. Brown** also post **positive IASA over expected**, indicating they add in‑air separation even after adjusting for context.
+- **Uncertainty and volume**:
+  - `receiver_iasa_bayes_intervals.png` shows each eligible WR/TE’s **posterior mean IASA over expected** with **95% credible intervals**, highlighting that low‑target players have wider, more uncertain effects.
+- **Predictive model (XGBoost)**:
+  - Final‑separation model achieves **train RMSE ≈ 1.39 (R² ≈ 0.65)** and **test RMSE ≈ 1.79 (R² ≈ 0.48)**.
+  - `xgboost_pred_vs_observed.png` compares **predicted vs. observed separation**, showing a reasonable fit but leaving room for unexplained variation.
+- **Figures**:
+
+::: {.columns}
+::: {.column width="50%"}
+![](../src/figures/receiver_iasa_bayes_intervals.png)
+:::
+::: {.column width="50%"}
+![](../src/figures/xgboost_pred_vs_observed.png)
+:::
+:::
+
+## Conclusion & Future Work
+
+- **Summary**:
+  - **IASA** quantifies how much separation receivers gain or lose during ball flight, revealing that most plays **lose separation**.
+  - **Markov Lift** reframes separation as a sequence of coverage states and highlights receivers who **break open** more often than league average.
+  - A mixed‑effects model with **position as a fixed effect** and WR/TE‑only, forward‑pass filtering yields **football‑correct, context‑adjusted** rankings of in‑air separation skill.
+- **Future directions**:
+  - Integrate **ball placement** and richer defender features (orientation, leverage) to separate QB vs. WR credit more cleanly.
+  - Extend to **multi‑season data** to study the stability of IASA and Markov Lift over time.
+  - Link in‑air separation more directly to **catch probability, YAC, and EPA** to quantify on‑field value.
+
+
