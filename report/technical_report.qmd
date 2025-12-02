@@ -43,48 +43,27 @@ For front offices and coaches, this work separates **who created separation** fr
 
 ### 1.1 Motivation and Problem Statement
 
-In the NFL, separation is usually summarized at a single moment: how open a receiver is at the throw or at the catch. These snapshots are informative but incomplete. A receiver who is initially covered can win late separation at the catch point, while another may be wide open at the throw but allow a defender back into the play as the ball arrives. Traditional metrics blur these stories together, making it difficult to distinguish **route‑running craft** from **play design** and **coverage busts**.
+In the NFL, how many yards a receiver is away from their defender is typically recorded at either the throw or the catch, but this metric is incomplete – while the ball is in the air, strong receivers may create additional space from the defender or defenders may gain yards on the receiver.
 
-Big Data Bowl tracking data offers a unique opportunity to quantify what happens during the flight of the ball. At 10 Hz resolution, we observe every step a receiver and the nearest defender take between the throw and the arrival. Our goal is to convert this raw positional data into interpretable, receiver‑centric metrics that:
+### 1.2 Football Example
 
-- Quantify how much separation is typically gained or lost while the ball is in the air.
-- Isolate receiver skill from contextual factors such as route type, coverage family, and air time.
-- Identify which receivers are most likely to break open late in the route.
+For example, during a week 7 Saints-Bears game in the 2025 regular season, the New Orleans Saints wide receiver Chris Olave caught a 57-yard catch completion to advance his team to the 20-yard line. Throughout the play, Chris Olave appears to gain yards on his defender after the ball was thrown, allowing him more space to catch the ball and secure further yards. This type of example motivates our central question: which receivers consistently create or maintain separation while the ball is in the air?
 
-### 1.2 Football Examples
+Determining which receivers can shake their defender is important for their teammates, coaches, scouts, and fans alike. If a quarterback knows a receiver is skilled, they may be able to throw to them in a critical situation and trust that they can generate space from their defender and get open for the throw. Coaches and scouts can use this information to build their team when drafting new wide receivers – if a wide receiver had caught many throws to gain many yards with a previous team, it is imperative to understand if that was their skill alone or due to a good quarterback. Finally, fans can even use this information when drafting their fantasy football team. Receivers who consistently gain separation are more likely to secure catches and generate scoring opportunities, making them reliable fantasy contributors.
 
-Consider two common scenarios:
-
-- A deep go route against press coverage where the receiver initially loses at the line but stacks the defender and creates late separation just as the ball arrives.
-- A shallow crosser scheme where route design generates a wide‑open window at the throw, but the defender closes quickly and contests the catch by the time the ball arrives.
-
-Both plays may record similar separation at the catch, yet the underlying skills are very different. The first reflects **in‑air separation creation**, while the second reflects **in‑air separation loss** despite a favorable design. Our analysis focuses specifically on this in‑air phase.
+The Big Data Bowl tracking data allows us to examine these receiver-defender situations more closely. We convert this raw position data into metrics that analyze how much separation is gained or lost while the ball is in the air and identify receiver skill and their capability to shake off their nearest defender.
 
 ### 1.3 Research Questions
+To generate our metrics, we address the following questions:
+How many yards do receivers typically gain or lose from their nearest defender throughout the throw time?
+When controlling for other factors that influence in-air separation (defenders, teams, and situations), who are the best receivers?
 
-We structure our analysis around four main questions:
-
-1. **Baseline Behavior**: How much separation do NFL receivers typically gain or lose between the throw and the catch, and how does this distribution look across the league?
-2. **Drivers of In‑Air Separation**: How do air time, initial separation, and contextual features (e.g., route and coverage families) influence IASA?
-3. **Receiver Skill and Markov Lift**: After accounting for context, which receivers consistently add separation in the air? How often do they transition from tight/moderate coverage into open/wide‑open states relative to league baseline?
-4. **Predictability**: To what extent can final separation be predicted using only pre‑throw information, and which features are most important?
 
 ## 2. Data Description
 
 ### 2.1 Data Sources
 
-We utilize tracking and play‑level data from the **Big Data Bowl 2026** release, covering the **2023 NFL regular season (Weeks 1–18)**. The key components are:
-
-- **Tracking data**: Frame‑level $x, y$ positions for all players and the ball at 10 Hz.
-- **Play metadata**: Play descriptions, game context (down, distance, time, score), and offense/defense identifiers.
-- **Targeted receiver information**: Identifiers for the targeted receiver and event tags for the throw and the ball arrival (catch, pass breakup, or incompletion).
-
-We conceptually split the tracking into:
-
-- **Input segment**: Frames from the snap up to the throw.
-- **Output segment**: Frames from the throw through the arrival of the ball or the end of the play.
-
-Our focus in this report is on the **output segment**, where in‑air receiver–defender interactions occur.
+To address our research questions, we use the Big Data Bowl 2026 tracking and play-level data that covers the 2023 NFL regular season (Weeks 1 - 18). The play-level data includes game context (down, distance, time, score), offensive/defensive descriptors, and event-level identifiers like catch or incompletion. In addition, the tracking data contains frame-level positions for all of the players and the ball at 10 Hz. The focus of our project is on tracking moments from the throw to the end of the play, so that we can analyze the receiver-defender interactions when a ball is thrown.
 
 ```{r}
 #| label: code-load-data
@@ -164,19 +143,8 @@ if (sys.nframe() == 0) {
 
 ### 2.2 Sample Construction
 
-Starting from all passing plays in Weeks 1–18, we construct our analysis sample as follows:
-
-- Restrict to plays with a clearly identified **targeted receiver**, throw frame, and ball‑arrival frame.
-- Remove plays where tracking is incomplete during the ball’s flight (e.g., missing frames or ambiguous timing).
-- Compute, for each frame during ball flight, the distance between the targeted receiver and the **nearest defender**, and summarize this trajectory at the play level.
-
-After these filters, our final dataset contains **14,108 passing plays**. For each play, we store:
-
-- Separation at the throw ($d_{throw}$).
-- Separation at the catch or arrival ($d_{catch}$).
-- Air time (duration between throw and arrival).
-- The full sequence of separation states (tight, moderate, open, wide open) during ball flight.
-- Play‑level contextual variables used in our models (route/coverage families, box count, etc.).
+To narrow down the data, we filter to only the plays with an identified targeted receiver, throw frame, and play end frame. We remove any plays where tracking may be incomplete during a ball’s flight. Finally, we computed the distance between the identified receiver and the closest defender at each individual frame from the throw to the play end.
+Our filtered dataset contains 14,108 passing plays, which each contain the receiver-defender separation at the throw and play end, the air time, and the contextual variables (down, score, routes run, etc.)
 
 ```{r}
 #| label: code-feature-engineering
@@ -417,20 +385,12 @@ if (sys.nframe() == 0) {
 
 ### 3.1 In‑Air Separation Added (IASA)
 
-Our primary play‑level metric is **In‑Air Separation Added (IASA)**, defined as:
-
+The play-level metric we have created is an In-Air Separation Added (IASA) model:
 $$
 IASA = d_{catch} - d_{throw},
 $$
 
-where $d_{throw}$ is the distance (in yards) between the targeted receiver and the nearest defender at the throw frame, and $d_{catch}$ is the corresponding distance at the ball‑arrival frame. Positive IASA indicates that the receiver **gained separation** while the ball was in the air, whereas negative IASA indicates that the defender **closed the gap**.
-
-Interpreting IASA:
-
-- A receiver with $IASA = +1.0$ yard turned a marginally contested target ($d_{throw} = 2.5$ yards) into a more open catch point ($d_{catch} = 3.5$ yards).
-- A receiver with $IASA = -1.5$ yards may have started open but allowed a defender to re‑enter the passing lane by the catch.
-
-IASA is intentionally simple: it summarizes the net change in separation over the ball’s flight, while our other methods (Markov Lift and mixed‑effects modeling) provide more nuanced views.
+This measures the difference in distance (in yards) between the targeted receiver and nearest defender at the time of the throw and the ball arrival (catch, pass breakup, or incompletion). Note that a positive IASA indicates the receiver gained separation from their nearest defender, while a negative IASA indicates the defender got closer. 
 
 ```{r}
 #| label: code-compute-iasa
@@ -557,36 +517,32 @@ if (sys.nframe() == 0) {
 
 ### 3.2 Separation States and Markov Lift
 
-To study separation as a **dynamic process**, we discretize separation at each frame into four states:
+To take a deeper look at our problem, we utilize the Markov Lift method. We begin by analyzing separation as a dynamic process, using categorical variables to make the distance at each frame distinct: 
 
 - **S0 (Tight)**: \< 1 yard
 - **S1 (Moderate)**: 1–3 yards
 - **S2 (Open)**: 3–5 yards
 - **S3 (Wide Open)**: \> 5 yards
 
-For each targeted route, we observe a sequence of states $(S_t)_{t=1}^T$ during ball flight. We model these transitions with a first‑order **Markov chain**, estimating the transition probabilities:
-
+We created a sequence for each play where each frame is assigned a separation category. We then model the probabilities with a first-order Markov chain that estimates the transition probabilities:  
 $$
 P(S_{t+1} = j \mid S_t = i), \quad i, j \in \{0,1,2,3\}.
 $$
 
-The league‑wide transition matrix captures how likely a receiver is to maintain or change separation from frame to frame. The diagonal elements reflect **state persistence**, while off‑diagonal elements represent gains or losses in separation. In our implementation we compute separation trajectories and transitions for **wide receivers and tight ends on forward‑pass targets**, aligning the Markov analysis with the sample used for our IASA skill modeling.
-
-We focus on transitions from **covered** states (S0, S1) to **open** states (S2, S3). Define:
-
+In words, we measure the probability of the separation category of the next frame given the previous one. The league-wide transition matrix measures how likely a receiver is to maintain or change separation from frame to frame. The change can either be stagnant, decreasing, or increasing. Next, conceptually grouping S0 and S1 into “covered” states and S2 and S3 into “open” states, we focus on the transition between these two groups. The following formula represents the probability of going from covered to open in a single frame:  
 $$
 p^{\text{league}}_{\text{break}} = P(S_{t+1} \in \{2,3\} \mid S_t \in \{0,1\})
 $$
 
-as the league‑average probability of “breaking open” in a single frame. Empirically, this baseline is **1.49% per frame**.
+Per frame, this probability is 1.49%.
 
-For each receiver, we compute an analogous empirical probability $p^{\text{player}}_{\text{break}}$ based on their frame‑level transitions. We then define **Markov Lift** as:
-
+Next, we calculate this model’s probability for each receiver based on their frame-level transition. We define Markov Lift as: 
 $$
 \text{Markov Lift} = p^{\text{player}}_{\text{break}} - p^{\text{league}}_{\text{break}}.
 $$
 
-Positive Markov Lift indicates that the receiver breaks open from coverage more often than an average NFL receiver, controlling for the fact that the event is rare on any single frame. This metric is naturally expressed in percentage points (e.g., “+6.2%”).
+This percentage measures if an individual receiver breaks open from often than the league average (a positive result) or vice versa. 
+
 
 ```{r}
 #| label: code-markov-lift
