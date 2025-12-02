@@ -1,5 +1,5 @@
 # 03_models.R
-# Description: Statistical and ML modeling of IASA.
+# Description: Statistical and ML modeling of BFD.
 # Goal: Isolate receiver ability (random intercept) controlling for context.
 
 library(tidyverse)
@@ -9,17 +9,17 @@ library(broom.mixed) # For tidy model outputs
 # --- Functions ---
 
 fit_mixed_effects_model <- function(data) {
-  # Model IASA controlling for:
+  # Model BFD controlling for:
   # - Air Time (longer throws allow more convergence)
-  # - Initial Separation (regression to the mean)
+  # - Initial Differential (regression to the mean)
   # - Route / coverage context and defensive structure
   # - Random Effect: Receiver ID (The metric we want)
   # - Random Effect: Game ID (Game-specific conditions/weather)
 
-  message("Fitting Mixed-Effects Model: IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +\n  team_coverage_man_zone + route_of_targeted_receiver + targeted_position + (1|targeted_id) + (1|game_id)...")
+  message("Fitting Mixed-Effects Model: BFD ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +\n  team_coverage_man_zone + route_of_targeted_receiver + targeted_position + (1|targeted_id) + (1|game_id)...")
 
   m <- lmer(
-    IASA ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +
+    BFD ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +
       team_coverage_man_zone + route_of_targeted_receiver + targeted_position +
       (1 | targeted_id) + (1 | game_id),
     data = data,
@@ -34,21 +34,21 @@ extract_receiver_rankings <- function(model) {
 
   ranefs |>
     as_tibble(rownames = "nfl_id") |>
-    rename(iasa_over_expected = `(Intercept)`) |>
-    arrange(desc(iasa_over_expected))
+    rename(BFD_over_expected = `(Intercept)`) |>
+    arrange(desc(BFD_over_expected))
 }
 
-fit_bayesian_iasa_model <- function(data) {
+fit_bayesian_BFD_model <- function(data) {
   # Fit a Bayesian analogue of the mixed-effects model (partial pooling over receivers/games)
   if (!requireNamespace("brms", quietly = TRUE)) {
-    warning("Package 'brms' not installed; skipping Bayesian IASA model.")
+    warning("Package 'brms' not installed; skipping Bayesian BFD model.")
     return(NULL)
   }
 
-  message("Fitting Bayesian Mixed-Effects Model for IASA (via brms)...")
+  message("Fitting Bayesian Mixed-Effects Model for BFD (via brms)...")
 
   bayes_fit <- brms::brm(
-    IASA ~ air_time + d_throw + pass_length + defenders_in_the_box +
+    BFD ~ air_time + d_throw + pass_length + defenders_in_the_box +
       team_coverage_man_zone + route_of_targeted_receiver + targeted_position +
       (1 | targeted_id) + (1 | game_id),
     data = data,
@@ -71,7 +71,7 @@ fit_bayesian_iasa_model <- function(data) {
 }
 
 extract_bayesian_receiver_rankings <- function(bayes_model) {
-  # Extract posterior mean and 95% CrI for receiver random intercepts (IASA over expected)
+  # Extract posterior mean and 95% CrI for receiver random intercepts (BFD over expected)
   # NOTE: This helper is intentionally conservative; if the structure of the
   # brms object is not as expected, it returns NULL and the pipeline falls
   # back to frequentist rankings only.
@@ -108,10 +108,10 @@ extract_bayesian_receiver_rankings <- function(bayes_model) {
     vals <- draws[[col_name]]
     tibble(
       nfl_id = rid,
-      iasa_over_expected_mean = mean(vals),
-      iasa_over_expected_sd = sd(vals),
-      iasa_over_expected_lower = quantile(vals, 0.025),
-      iasa_over_expected_upper = quantile(vals, 0.975)
+      BFD_over_expected_mean = mean(vals),
+      BFD_over_expected_sd = sd(vals),
+      BFD_over_expected_lower = quantile(vals, 0.025),
+      BFD_over_expected_upper = quantile(vals, 0.975)
     )
   })
 
@@ -130,7 +130,7 @@ extract_bayesian_receiver_rankings <- function(bayes_model) {
   }
 
   summary_df |>
-    arrange(desc(iasa_over_expected_mean))
+    arrange(desc(BFD_over_expected_mean))
 }
 
 # --- Main Execution ---
@@ -156,7 +156,7 @@ if (sys.nframe() == 0) {
       warning("analysis_full.rds not found. Using Week 1 data.")
       analysis_path <- file.path(PROC_DIR, "analysis_w01.rds")
     } else {
-      stop("No analysis data found. Run 02_compute_IASA.R first.")
+      stop("No analysis data found. Run 02_compute_IASA.R (now BFD) first.")
     }
   }
 
@@ -202,7 +202,7 @@ if (sys.nframe() == 0) {
 
   missing_stats <- df_filtered |>
     summarise(
-      missing_IASA = sum(is.na(IASA)),
+      missing_BFD = sum(is.na(BFD)),
       missing_air_time = sum(is.na(air_time)),
       missing_d_throw = sum(is.na(d_throw)),
       missing_d_catch = sum(is.na(d_catch)),
@@ -217,7 +217,7 @@ if (sys.nframe() == 0) {
   # Filter for valid data
   # IMPORTANT: Ensure targeted_id is a factor for random effects
   df_model <- df_filtered |>
-    drop_na(IASA, air_time, d_throw, targeted_id, pass_length, defenders_in_the_box) |>
+    drop_na(BFD, air_time, d_throw, targeted_id, pass_length, defenders_in_the_box) |>
     filter(air_time >= 0) |> # Allow 0 air time? No, but >= just in case floating point issues
     mutate(
       targeted_id = as.factor(targeted_id),
@@ -246,7 +246,7 @@ if (sys.nframe() == 0) {
   print(summary(mem_model))
 
   # --- Model validation metrics (in-sample) ---
-  y_obs <- df_model$IASA
+  y_obs <- df_model$BFD
   y_hat <- fitted(mem_model)
   resid <- y_obs - y_hat
 
@@ -264,7 +264,7 @@ if (sys.nframe() == 0) {
 
   # --- Diagnostic figures ---
   diag_df <- tibble(
-    IASA = y_obs,
+    BFD = y_obs,
     fitted = y_hat,
     resid = resid
   )
@@ -272,14 +272,14 @@ if (sys.nframe() == 0) {
   # Determine figure directory
   FIG_DIR <- get_fig_dir()
 
-  p_fit <- ggplot(diag_df, aes(x = fitted, y = IASA)) +
+  p_fit <- ggplot(diag_df, aes(x = fitted, y = BFD)) +
     geom_point(alpha = 0.3, color = "#0072B2") +
     geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
     theme_minimal() +
     labs(
-      title = "Mixed-Effects Model: Fitted vs Observed IASA",
-      x = "Fitted IASA",
-      y = "Observed IASA"
+      title = "Mixed-Effects Model: Fitted vs Observed BFD",
+      x = "Fitted BFD",
+      y = "Observed BFD"
     )
 
   ggsave(
@@ -292,7 +292,7 @@ if (sys.nframe() == 0) {
     geom_histogram(bins = 40, fill = "#D55E00", color = "white", alpha = 0.8) +
     theme_minimal() +
     labs(
-      title = "Mixed-Effects Model Residuals (IASA)",
+      title = "Mixed-Effects Model Residuals (BFD)",
       x = "Residual",
       y = "Count"
     )
@@ -328,12 +328,12 @@ if (sys.nframe() == 0) {
 
   rankings_qualified <- rankings_full |>
     filter(n_targets >= 30) |>
-    arrange(desc(iasa_over_expected))
+    arrange(desc(BFD_over_expected))
 
   print(head(rankings_qualified, 10))
 
   # Fit Bayesian version of the mixed-effects model (if brms is available)
-  bayes_model <- fit_bayesian_iasa_model(df_model)
+  bayes_model <- fit_bayesian_BFD_model(df_model)
   bayes_rankings <- extract_bayesian_receiver_rankings(bayes_model)
 
   if (!is.null(bayes_model) && !is.null(bayes_rankings)) {
@@ -345,15 +345,15 @@ if (sys.nframe() == 0) {
 
     bayes_rankings_qualified <- bayes_rankings_full |>
       filter(n_targets >= 30) |>
-      arrange(desc(iasa_over_expected_mean))
+      arrange(desc(BFD_over_expected_mean))
 
-    message("Bayesian mixed-effects model for IASA fit successfully.")
+    message("Bayesian mixed-effects model for BFD fit successfully.")
     print(head(bayes_rankings_qualified, 10))
 
     saveRDS(bayes_model, file.path(PROC_DIR, "mixed_effects_model_bayes.rds"))
     write_csv(bayes_rankings_qualified, file.path(PROC_DIR, "receiver_rankings_bayes.csv"))
   } else {
-    message("Bayesian IASA model not fit; skipping Bayesian rankings export.")
+    message("Bayesian BFD model not fit; skipping Bayesian rankings export.")
   }
 
   # Save outputs

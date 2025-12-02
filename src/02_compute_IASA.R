@@ -1,19 +1,19 @@
 # 02_compute_IASA.R
-# Description: Compute In-Air Separation Added (IASA).
-# Formula: IASA = d_catch - d_throw
+# Description: Compute Ball-Flight Differential added (BFD).
+# Formula: BFD = d_catch - d_throw
 # Interpretation:
-#   Positive IASA -> Gained separation (Good for WR)
-#   Negative IASA -> Lost separation (Good for DB)
+#   Positive BFD -> Gained separation (Good for WR)
+#   Negative BFD -> Lost separation (Good for DB)
 
 library(tidyverse)
 
-compute_iasa <- function(play_features) {
+compute_BFD <- function(play_features) {
   play_features |>
     mutate(
-      IASA = d_catch - d_throw,
+      BFD = d_catch - d_throw,
       # Additional derived metrics
       separation_change_pct = ifelse(d_throw > 0, (d_catch - d_throw) / d_throw, NA_real_),
-      is_separation_gained = IASA > 0
+      is_separation_gained = BFD > 0
     )
 }
 
@@ -43,8 +43,8 @@ if (sys.nframe() == 0) {
 
   message(paste("Total plays loaded:", nrow(features)))
 
-  message("Computing IASA and derived metrics...")
-  analysis_df <- compute_iasa(features)
+  message("Computing BFD and derived metrics...")
+  analysis_df <- compute_BFD(features)
 
   # --- Optional: Join supplementary play-level data, if available ---
   # This adds route / coverage / EPA context from BDB2026_supplementary_data.csv
@@ -103,9 +103,9 @@ if (sys.nframe() == 0) {
   # Basic summary
   summary_stats <- analysis_df |>
     summarise(
-      avg_IASA = mean(IASA, na.rm = TRUE),
-      median_IASA = median(IASA, na.rm = TRUE),
-      prop_positive = mean(IASA > 0, na.rm = TRUE),
+      avg_BFD = mean(BFD, na.rm = TRUE),
+      median_BFD = median(BFD, na.rm = TRUE),
+      prop_positive = mean(BFD > 0, na.rm = TRUE),
       n_plays = n()
     )
 

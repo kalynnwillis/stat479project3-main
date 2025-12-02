@@ -1899,11 +1899,11 @@ Air Time shows that the longer the throw, the more separation is lost. The coeff
 
 Initial Differential shows that extreme situations move back toward normal by the time the ball arrives, as the coefficient is -0.39 which is statistically significant with a p-value < .01. Routes open at the throw basically, extreme situations tend to move back toward “normal” by the time the ball arrives. For every extra yard of openness when the ball is thrown, the receiver loses about 0.39 yards of advantage by the time the ball throw is completed.
 
-![Mixed-Effects Fitted vs Observed](../src/figures/mixed_effects_fitted_vs_observed.png)
+![Mixed-Effects Fitted vs Observed](../figures/mixed_effects_fitted_vs_observed.png)
 
 The fitted vs observed are about centered and symmetric for a normal distribution. This can be further strengthened by the histogram below.
 
-![Mixed-Effects Residuals](../src/figures/mixed_effects_residuals_hist.png)
+![Mixed-Effects Residuals](../figures/mixed_effects_residuals_hist.png)
 
 The air time, initial differential, and covariates explain a meaningful part of the variation in the Ball-Flight Differential. Still, the variation can be accounted for by other relevant factors like the receiver, quarterback, ball location, etc.
 
@@ -1991,7 +1991,7 @@ The receivers at the top of this table show that they get open more often on ave
 
 Thus, receivers who run a lot of routes and typically create space have smaller intervals, so we are more confident in their high openness average. Then, the receivers with fewer routes or fewer roles can look fantastic, but their intervals are wide, which means more uncertainty about their performance being above average.
 
-![Bayesian Markov Lift Intervals](../src/figures/markov_lift_bayes_intervals.png)
+![Bayesian Markov Lift Intervals](../figures/markov_lift_bayes_intervals.png)
 
 
 ### XGBoost: Predictive Model
@@ -2005,7 +2005,7 @@ On the held‑out test set, the model attains an RMSE of **1.79 yards**, meaning
 
 Overall, the model's scores to determine the signficance of various features shows that Initial Differential is most predictive, then Air Time follows suit. While there are other features that help explain and predict the results, they are not as impactful to the model. Below, we can see the predicted versus observed plot to show how the points have moderate variance:
 
-![XGBoost Predicted vs Observed](../src/figures/xgboost_pred_vs_observed.png)
+![XGBoost Predicted vs Observed](../figures/xgboost_pred_vs_observed.png)
 
 These inputs provide the most accuracy in our predictions:
 
@@ -2089,7 +2089,7 @@ Receivers with negative values rely on the timing and scheme, while somewhat str
 
 For example, Chris Olave has an BFD Over Expected of about 0.15, with a narrower CI of -0.07 to 0.38. This means Olave is consistent by adding about a quarter yard of separation during the throw (after already accounting for route, defender, air in time, etc.). The narrower CI says that this separation is not due to noise of lucky plays, but rather that Olave is consistent. On the other hand, Kalif Raymond has an BFD Over Expected of about 0.24 and a wider CI of -0.03 to 0.58. While Raymond adds about half a yard of separation during the throw, which is better ball flight differential than Olave, we are not very confident that this is how he truly, consistently plays due to the wide CI. Thus, his BFD varies due to scheme, play, routes, mismatches of players, etc. There may be times when Raymond separates, versus times when he is not open at all. Overall, Olave shows a smaller, but more reliable pattern of separation, to frequently breaking open.
 
-![Bayesian BFD Over Expected Intervals](../src/figures/receiver_BFD_bayes_intervals.png)
+![Bayesian BFD Over Expected Intervals](../figures/receiver_BFD_bayes_intervals.png)
 
 
 ## Improvements
