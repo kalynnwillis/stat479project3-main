@@ -47,7 +47,9 @@ In the NFL, how many yards a receiver is away from their defender is typically r
 
 ### 1.2 Football Example
 
-For example, during a week 7 Saints-Bears game in the 2025 regular season, the New Orleans Saints wide receiver Chris Olave caught a 57-yard catch completion to advance his team to the 20-yard line. Throughout the play, Chris Olave appears to gain yards on his defender after the ball was thrown, allowing him more space to catch the ball and secure further yards. This type of example motivates our central question: which receivers consistently create or maintain separation while the ball is in the air?
+For example, during a week 7 Saints-Bears game in the 2025 regular season, the New Orleans Saints wide receiver Chris Olave caught a 57-yard catch completion to advance his team to the 20-yard line. A replay of this play can be viewed here: [Chris Olave 57-yard catch vs Bears (Week 7, 2025)](https://www.youtube.com/watch?v=Fxqq43Bfyf4).
+
+Throughout the play, Chris Olave appears to gain yards on his defender after the ball was thrown, allowing him more space to catch the ball and secure further yards. This type of example motivates our central question: which receivers consistently create or maintain separation while the ball is in the air?
 
 Determining which receivers can shake their defender is important for their teammates, coaches, scouts, and fans alike. If a quarterback knows a receiver is skilled, they may be able to throw to them in a critical situation and trust that they can generate space from their defender and get open for the throw. Coaches and scouts can use this information to build their team when drafting new wide receivers – if a wide receiver had caught many throws to gain many yards with a previous team, it is imperative to understand if that was their skill alone or due to a good quarterback. Finally, fans can even use this information when drafting their fantasy football team. Receivers who consistently gain separation are more likely to secure catches and generate scoring opportunities, making them reliable fantasy contributors.
 

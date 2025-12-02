@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Eleanor Brothers, Kalynn Willis, Jasmine Peck">
-<meta name="dcterms.date" content="2025-11-29">
+<meta name="dcterms.date" content="2025-12-01">
 
 <title>Technical Report: Quantifying In-Air Receiver Movement</title>
 <style>
@@ -130,7 +130,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 29, 2025</p>
+      <p class="date">December 1, 2025</p>
     </div>
   </div>
   
@@ -173,50 +173,25 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="introduction">1. Introduction</h2>
 <section id="motivation-and-problem-statement" class="level3">
 <h3 class="anchored" data-anchor-id="motivation-and-problem-statement">1.1 Motivation and Problem Statement</h3>
-<p>In the NFL, separation is usually summarized at a single moment: how open a receiver is at the throw or at the catch. These snapshots are informative but incomplete. A receiver who is initially covered can win late separation at the catch point, while another may be wide open at the throw but allow a defender back into the play as the ball arrives. Traditional metrics blur these stories together, making it difficult to distinguish <strong>route‑running craft</strong> from <strong>play design</strong> and <strong>coverage busts</strong>.</p>
-<p>Big Data Bowl tracking data offers a unique opportunity to quantify what happens during the flight of the ball. At 10 Hz resolution, we observe every step a receiver and the nearest defender take between the throw and the arrival. Our goal is to convert this raw positional data into interpretable, receiver‑centric metrics that:</p>
-<ul>
-<li>Quantify how much separation is typically gained or lost while the ball is in the air.</li>
-<li>Isolate receiver skill from contextual factors such as route type, coverage family, and air time.</li>
-<li>Identify which receivers are most likely to break open late in the route.</li>
-</ul>
+<p>In the NFL, how many yards a receiver is away from their defender is typically recorded at either the throw or the catch, but this metric is incomplete – while the ball is in the air, strong receivers may create additional space from the defender or defenders may gain yards on the receiver.</p>
 </section>
-<section id="football-examples" class="level3">
-<h3 class="anchored" data-anchor-id="football-examples">1.2 Football Examples</h3>
-<p>Consider two common scenarios:</p>
-<ul>
-<li>A deep go route against press coverage where the receiver initially loses at the line but stacks the defender and creates late separation just as the ball arrives.</li>
-<li>A shallow crosser scheme where route design generates a wide‑open window at the throw, but the defender closes quickly and contests the catch by the time the ball arrives.</li>
-</ul>
-<p>Both plays may record similar separation at the catch, yet the underlying skills are very different. The first reflects <strong>in‑air separation creation</strong>, while the second reflects <strong>in‑air separation loss</strong> despite a favorable design. Our analysis focuses specifically on this in‑air phase.</p>
+<section id="football-example" class="level3">
+<h3 class="anchored" data-anchor-id="football-example">1.2 Football Example</h3>
+<p>For example, during a week 7 Saints-Bears game in the 2025 regular season, the New Orleans Saints wide receiver Chris Olave caught a 57-yard catch completion to advance his team to the 20-yard line. A replay of this play can be viewed here: <a href="https://www.youtube.com/watch?v=Fxqq43Bfyf4">Chris Olave 57-yard catch vs Bears (Week 7, 2025)</a>.</p>
+<p>Throughout the play, Chris Olave appears to gain yards on his defender after the ball was thrown, allowing him more space to catch the ball and secure further yards. This type of example motivates our central question: which receivers consistently create or maintain separation while the ball is in the air?</p>
+<p>Determining which receivers can shake their defender is important for their teammates, coaches, scouts, and fans alike. If a quarterback knows a receiver is skilled, they may be able to throw to them in a critical situation and trust that they can generate space from their defender and get open for the throw. Coaches and scouts can use this information to build their team when drafting new wide receivers – if a wide receiver had caught many throws to gain many yards with a previous team, it is imperative to understand if that was their skill alone or due to a good quarterback. Finally, fans can even use this information when drafting their fantasy football team. Receivers who consistently gain separation are more likely to secure catches and generate scoring opportunities, making them reliable fantasy contributors.</p>
+<p>The Big Data Bowl tracking data allows us to examine these receiver-defender situations more closely. We convert this raw position data into metrics that analyze how much separation is gained or lost while the ball is in the air and identify receiver skill and their capability to shake off their nearest defender.</p>
 </section>
 <section id="research-questions" class="level3">
 <h3 class="anchored" data-anchor-id="research-questions">1.3 Research Questions</h3>
-<p>We structure our analysis around four main questions:</p>
-<ol type="1">
-<li><strong>Baseline Behavior</strong>: How much separation do NFL receivers typically gain or lose between the throw and the catch, and how does this distribution look across the league?</li>
-<li><strong>Drivers of In‑Air Separation</strong>: How do air time, initial separation, and contextual features (e.g., route and coverage families) influence IASA?</li>
-<li><strong>Receiver Skill and Markov Lift</strong>: After accounting for context, which receivers consistently add separation in the air? How often do they transition from tight/moderate coverage into open/wide‑open states relative to league baseline?</li>
-<li><strong>Predictability</strong>: To what extent can final separation be predicted using only pre‑throw information, and which features are most important?</li>
-</ol>
+<p>To generate our metrics, we address the following questions: How many yards do receivers typically gain or lose from their nearest defender throughout the throw time? When controlling for other factors that influence in-air separation (defenders, teams, and situations), who are the best receivers?</p>
 </section>
 </section>
 <section id="data-description" class="level2">
 <h2 class="anchored" data-anchor-id="data-description">2. Data Description</h2>
 <section id="data-sources" class="level3">
 <h3 class="anchored" data-anchor-id="data-sources">2.1 Data Sources</h3>
-<p>We utilize tracking and play‑level data from the <strong>Big Data Bowl 2026</strong> release, covering the <strong>2023 NFL regular season (Weeks 1–18)</strong>. The key components are:</p>
-<ul>
-<li><strong>Tracking data</strong>: Frame‑level <span class="math inline">\(x, y\)</span> positions for all players and the ball at 10 Hz.</li>
-<li><strong>Play metadata</strong>: Play descriptions, game context (down, distance, time, score), and offense/defense identifiers.</li>
-<li><strong>Targeted receiver information</strong>: Identifiers for the targeted receiver and event tags for the throw and the ball arrival (catch, pass breakup, or incompletion).</li>
-</ul>
-<p>We conceptually split the tracking into:</p>
-<ul>
-<li><strong>Input segment</strong>: Frames from the snap up to the throw.</li>
-<li><strong>Output segment</strong>: Frames from the throw through the arrival of the ball or the end of the play.</li>
-</ul>
-<p>Our focus in this report is on the <strong>output segment</strong>, where in‑air receiver–defender interactions occur.</p>
+<p>To address our research questions, we use the Big Data Bowl 2026 tracking and play-level data that covers the 2023 NFL regular season (Weeks 1 - 18). The play-level data includes game context (down, distance, time, score), offensive/defensive descriptors, and event-level identifiers like catch or incompletion. In addition, the tracking data contains frame-level positions for all of the players and the ball at 10 Hz. The focus of our project is on tracking moments from the throw to the end of the play, so that we can analyze the receiver-defender interactions when a ball is thrown.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
@@ -296,20 +271,7 @@ window.Quarto = {
 </section>
 <section id="sample-construction" class="level3">
 <h3 class="anchored" data-anchor-id="sample-construction">2.2 Sample Construction</h3>
-<p>Starting from all passing plays in Weeks 1–18, we construct our analysis sample as follows:</p>
-<ul>
-<li>Restrict to plays with a clearly identified <strong>targeted receiver</strong>, throw frame, and ball‑arrival frame.</li>
-<li>Remove plays where tracking is incomplete during the ball’s flight (e.g., missing frames or ambiguous timing).</li>
-<li>Compute, for each frame during ball flight, the distance between the targeted receiver and the <strong>nearest defender</strong>, and summarize this trajectory at the play level.</li>
-</ul>
-<p>After these filters, our final dataset contains <strong>14,108 passing plays</strong>. For each play, we store:</p>
-<ul>
-<li>Separation at the throw (<span class="math inline">\(d_{throw}\)</span>).</li>
-<li>Separation at the catch or arrival (<span class="math inline">\(d_{catch}\)</span>).</li>
-<li>Air time (duration between throw and arrival).</li>
-<li>The full sequence of separation states (tight, moderate, open, wide open) during ball flight.</li>
-<li>Play‑level contextual variables used in our models (route/coverage families, box count, etc.).</li>
-</ul>
+<p>To narrow down the data, we filter to only the plays with an identified targeted receiver, throw frame, and play end frame. We remove any plays where tracking may be incomplete during a ball’s flight. Finally, we computed the distance between the identified receiver and the closest defender at each individual frame from the throw to the play end. Our filtered dataset contains 14,108 passing plays, which each contain the receiver-defender separation at the throw and play end, the air time, and the contextual variables (down, score, routes run, etc.)</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
@@ -377,163 +339,172 @@ window.Quarto = {
 <span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>  tr_name <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(tr_name_vec) <span class="sc">&gt;</span> <span class="dv">0</span>) tr_name_vec[<span class="dv">1</span>] <span class="cf">else</span> <span class="cn">NA_character_</span></span>
 <span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Identify Defenders</span></span>
-<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>  defs_throw <span class="ot">&lt;-</span> play_in <span class="sc">|&gt;</span></span>
-<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(player_role <span class="sc">==</span> <span class="st">"Defensive coverage"</span>, frame_id <span class="sc">==</span> throw_frame)</span>
-<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">nrow</span>(defs_throw) <span class="sc">==</span> <span class="dv">0</span>) {</span>
-<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(</span>
-<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>      <span class="st">"No 'Defensive coverage' labels for game "</span>, gid,</span>
-<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>      <span class="st">", play "</span>, pid, <span class="st">"; using non-offensive players at throw_frame as defenders."</span></span>
-<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>    defs_throw <span class="ot">&lt;-</span> play_in <span class="sc">|&gt;</span></span>
-<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(<span class="sc">!</span>player_role <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Targeted Receiver"</span>, <span class="st">"Passer"</span>, <span class="st">"Other Route Runner"</span>), frame_id <span class="sc">==</span> throw_frame)</span>
-<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>  defender_ids <span class="ot">&lt;-</span> <span class="fu">unique</span>(defs_throw<span class="sc">$</span>nfl_id)</span>
-<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>  d_throw <span class="ot">&lt;-</span> <span class="fu">calculate_separation</span>(rec_throw, defs_throw)</span>
-<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- In-air frames (output data: from throw to ball arrival) ---</span></span>
-<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>  rec_out <span class="ot">&lt;-</span> play_out <span class="sc">|&gt;</span> <span class="fu">filter</span>(nfl_id <span class="sc">==</span> tr_id)</span>
-<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">nrow</span>(rec_out) <span class="sc">==</span> <span class="dv">0</span>) {</span>
-<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="cn">NULL</span>)</span>
-<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Targeted receiver position (from input CSV; e.g., WR/TE/RB/FB)</span></span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>  tr_pos_vec <span class="ot">&lt;-</span> play_in <span class="sc">|&gt;</span></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(nfl_id <span class="sc">==</span> tr_id) <span class="sc">|&gt;</span></span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>    <span class="fu">distinct</span>(player_position) <span class="sc">|&gt;</span></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pull</span>(player_position)</span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>  tr_pos <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(tr_pos_vec) <span class="sc">&gt;</span> <span class="dv">0</span>) tr_pos_vec[<span class="dv">1</span>] <span class="cf">else</span> <span class="cn">NA_character_</span></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Identify Defenders</span></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>  defs_throw <span class="ot">&lt;-</span> play_in <span class="sc">|&gt;</span></span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(player_role <span class="sc">==</span> <span class="st">"Defensive coverage"</span>, frame_id <span class="sc">==</span> throw_frame)</span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">nrow</span>(defs_throw) <span class="sc">==</span> <span class="dv">0</span>) {</span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(</span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>      <span class="st">"No 'Defensive coverage' labels for game "</span>, gid,</span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>      <span class="st">", play "</span>, pid, <span class="st">"; using non-offensive players at throw_frame as defenders."</span></span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>    defs_throw <span class="ot">&lt;-</span> play_in <span class="sc">|&gt;</span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(<span class="sc">!</span>player_role <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Targeted Receiver"</span>, <span class="st">"Passer"</span>, <span class="st">"Other Route Runner"</span>), frame_id <span class="sc">==</span> throw_frame)</span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a>  defender_ids <span class="ot">&lt;-</span> <span class="fu">unique</span>(defs_throw<span class="sc">$</span>nfl_id)</span>
 <span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>  first_out_frame <span class="ot">&lt;-</span> <span class="fu">min</span>(rec_out<span class="sc">$</span>frame_id, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a>  catch_frame <span class="ot">&lt;-</span> <span class="fu">max</span>(rec_out<span class="sc">$</span>frame_id, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a>  rec_catch <span class="ot">&lt;-</span> rec_out <span class="sc">|&gt;</span> <span class="fu">filter</span>(frame_id <span class="sc">==</span> catch_frame)</span>
-<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a>  defs_catch <span class="ot">&lt;-</span> play_out <span class="sc">|&gt;</span></span>
-<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(nfl_id <span class="sc">%in%</span> defender_ids, frame_id <span class="sc">==</span> catch_frame)</span>
-<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a>  d_catch <span class="ot">&lt;-</span> <span class="fu">calculate_separation</span>(rec_catch, defs_catch)</span>
-<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Assume 10 Hz frame rate; air_time is time between first in-air frame</span></span>
-<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a>  <span class="co"># in the output and the catch frame.</span></span>
-<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a>  air_time <span class="ot">&lt;-</span> (catch_frame <span class="sc">-</span> first_out_frame) <span class="sc">*</span> <span class="fl">0.1</span></span>
-<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- NEW: Compute Separation Trajectory ---</span></span>
-<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a>  <span class="co"># We compute separation for EVERY frame in the output for this receiver</span></span>
-<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Using simple map instead of group_modify to avoid grouping issues</span></span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>  d_throw <span class="ot">&lt;-</span> <span class="fu">calculate_separation</span>(rec_throw, defs_throw)</span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- In-air frames (output data: from throw to ball arrival) ---</span></span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a>  rec_out <span class="ot">&lt;-</span> play_out <span class="sc">|&gt;</span> <span class="fu">filter</span>(nfl_id <span class="sc">==</span> tr_id)</span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">nrow</span>(rec_out) <span class="sc">==</span> <span class="dv">0</span>) {</span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="cn">NULL</span>)</span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a>  first_out_frame <span class="ot">&lt;-</span> <span class="fu">min</span>(rec_out<span class="sc">$</span>frame_id, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a>  catch_frame <span class="ot">&lt;-</span> <span class="fu">max</span>(rec_out<span class="sc">$</span>frame_id, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a>  rec_catch <span class="ot">&lt;-</span> rec_out <span class="sc">|&gt;</span> <span class="fu">filter</span>(frame_id <span class="sc">==</span> catch_frame)</span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a>  defs_catch <span class="ot">&lt;-</span> play_out <span class="sc">|&gt;</span></span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(nfl_id <span class="sc">%in%</span> defender_ids, frame_id <span class="sc">==</span> catch_frame)</span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a>  d_catch <span class="ot">&lt;-</span> <span class="fu">calculate_separation</span>(rec_catch, defs_catch)</span>
 <span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a>  frames <span class="ot">&lt;-</span> <span class="fu">unique</span>(rec_out<span class="sc">$</span>frame_id)</span>
-<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a>  traj_list <span class="ot">&lt;-</span> <span class="fu">map</span>(frames, <span class="cf">function</span>(f) {</span>
-<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a>    rec_loc <span class="ot">&lt;-</span> rec_out <span class="sc">|&gt;</span> <span class="fu">filter</span>(frame_id <span class="sc">==</span> f)</span>
-<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a>    defs <span class="ot">&lt;-</span> play_out <span class="sc">|&gt;</span> <span class="fu">filter</span>(frame_id <span class="sc">==</span> f, nfl_id <span class="sc">%in%</span> defender_ids)</span>
-<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
-<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a>      <span class="at">game_id =</span> gid,</span>
-<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a>      <span class="at">play_id =</span> pid,</span>
-<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a>      <span class="at">frame_id =</span> f,</span>
-<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a>      <span class="at">separation =</span> <span class="fu">calculate_separation</span>(rec_loc, defs)</span>
-<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Assume 10 Hz frame rate; air_time is time between first in-air frame</span></span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a>  <span class="co"># in the output and the catch frame.</span></span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a>  air_time <span class="ot">&lt;-</span> (catch_frame <span class="sc">-</span> first_out_frame) <span class="sc">*</span> <span class="fl">0.1</span></span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- NEW: Compute Separation Trajectory ---</span></span>
+<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a>  <span class="co"># We compute separation for EVERY frame in the output for this receiver</span></span>
+<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Using simple map instead of group_modify to avoid grouping issues</span></span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a>  frames <span class="ot">&lt;-</span> <span class="fu">unique</span>(rec_out<span class="sc">$</span>frame_id)</span>
+<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a>  traj_list <span class="ot">&lt;-</span> <span class="fu">map</span>(frames, <span class="cf">function</span>(f) {</span>
+<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a>    rec_loc <span class="ot">&lt;-</span> rec_out <span class="sc">|&gt;</span> <span class="fu">filter</span>(frame_id <span class="sc">==</span> f)</span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a>    defs <span class="ot">&lt;-</span> play_out <span class="sc">|&gt;</span> <span class="fu">filter</span>(frame_id <span class="sc">==</span> f, nfl_id <span class="sc">%in%</span> defender_ids)</span>
 <span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a>  traj_df <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(traj_list)</span>
-<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a>    <span class="at">play_features =</span> <span class="fu">tibble</span>(</span>
-<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a>      <span class="at">game_id =</span> gid,</span>
-<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a>      <span class="at">play_id =</span> pid,</span>
-<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a>      <span class="at">targeted_id =</span> tr_id,</span>
-<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a>      <span class="at">targeted_name =</span> tr_name,</span>
-<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a>      <span class="at">throw_frame =</span> throw_frame,</span>
-<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a>      <span class="at">catch_frame =</span> catch_frame,</span>
-<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a>      <span class="at">d_throw =</span> d_throw,</span>
-<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a>      <span class="at">d_catch =</span> d_catch,</span>
-<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a>      <span class="at">air_time =</span> air_time,</span>
-<span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a>      <span class="at">ball_land_x =</span> <span class="fu">first</span>(play_in<span class="sc">$</span>ball_land_x),</span>
-<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a>      <span class="at">ball_land_y =</span> <span class="fu">first</span>(play_in<span class="sc">$</span>ball_land_y)</span>
-<span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a>    <span class="at">trajectory =</span> traj_df</span>
-<span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb2-137"><a href="#cb2-137" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb2-138"><a href="#cb2-138" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-139"><a href="#cb2-139" aria-hidden="true" tabindex="-1"></a>build_play_feature_table <span class="ot">&lt;-</span> <span class="cf">function</span>(week_data) {</span>
-<span id="cb2-140"><a href="#cb2-140" aria-hidden="true" tabindex="-1"></a>  input_df <span class="ot">&lt;-</span> week_data<span class="sc">$</span>input</span>
-<span id="cb2-141"><a href="#cb2-141" aria-hidden="true" tabindex="-1"></a>  output_df <span class="ot">&lt;-</span> week_data<span class="sc">$</span>output</span>
-<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-143"><a href="#cb2-143" aria-hidden="true" tabindex="-1"></a>  plays <span class="ot">&lt;-</span> input_df <span class="sc">|&gt;</span> <span class="fu">distinct</span>(game_id, play_id)</span>
-<span id="cb2-144"><a href="#cb2-144" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-145"><a href="#cb2-145" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Processing"</span>, <span class="fu">nrow</span>(plays), <span class="st">"plays..."</span>))</span>
-<span id="cb2-146"><a href="#cb2-146" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-147"><a href="#cb2-147" aria-hidden="true" tabindex="-1"></a>  all_features <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb2-148"><a href="#cb2-148" aria-hidden="true" tabindex="-1"></a>  all_trajectories <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb2-149"><a href="#cb2-149" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-150"><a href="#cb2-150" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(plays)) {</span>
-<span id="cb2-151"><a href="#cb2-151" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> plays[i, ]</span>
-<span id="cb2-152"><a href="#cb2-152" aria-hidden="true" tabindex="-1"></a>    res <span class="ot">&lt;-</span> <span class="fu">compute_play_separation</span>(p<span class="sc">$</span>game_id, p<span class="sc">$</span>play_id, input_df, output_df)</span>
+<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
+<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a>      <span class="at">game_id =</span> gid,</span>
+<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a>      <span class="at">play_id =</span> pid,</span>
+<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a>      <span class="at">frame_id =</span> f,</span>
+<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a>      <span class="at">separation =</span> <span class="fu">calculate_separation</span>(rec_loc, defs)</span>
+<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a>  traj_df <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(traj_list)</span>
+<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a>    <span class="at">play_features =</span> <span class="fu">tibble</span>(</span>
+<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a>      <span class="at">game_id =</span> gid,</span>
+<span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a>      <span class="at">play_id =</span> pid,</span>
+<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a>      <span class="at">targeted_id =</span> tr_id,</span>
+<span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a>      <span class="at">targeted_name =</span> tr_name,</span>
+<span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a>      <span class="at">targeted_position =</span> tr_pos,</span>
+<span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a>      <span class="at">throw_frame =</span> throw_frame,</span>
+<span id="cb2-137"><a href="#cb2-137" aria-hidden="true" tabindex="-1"></a>      <span class="at">catch_frame =</span> catch_frame,</span>
+<span id="cb2-138"><a href="#cb2-138" aria-hidden="true" tabindex="-1"></a>      <span class="at">d_throw =</span> d_throw,</span>
+<span id="cb2-139"><a href="#cb2-139" aria-hidden="true" tabindex="-1"></a>      <span class="at">d_catch =</span> d_catch,</span>
+<span id="cb2-140"><a href="#cb2-140" aria-hidden="true" tabindex="-1"></a>      <span class="at">air_time =</span> air_time,</span>
+<span id="cb2-141"><a href="#cb2-141" aria-hidden="true" tabindex="-1"></a>      <span class="at">ball_land_x =</span> <span class="fu">first</span>(play_in<span class="sc">$</span>ball_land_x),</span>
+<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a>      <span class="at">ball_land_y =</span> <span class="fu">first</span>(play_in<span class="sc">$</span>ball_land_y)</span>
+<span id="cb2-143"><a href="#cb2-143" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb2-144"><a href="#cb2-144" aria-hidden="true" tabindex="-1"></a>    <span class="at">trajectory =</span> traj_df</span>
+<span id="cb2-145"><a href="#cb2-145" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb2-146"><a href="#cb2-146" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-147"><a href="#cb2-147" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-148"><a href="#cb2-148" aria-hidden="true" tabindex="-1"></a>build_play_feature_table <span class="ot">&lt;-</span> <span class="cf">function</span>(week_data) {</span>
+<span id="cb2-149"><a href="#cb2-149" aria-hidden="true" tabindex="-1"></a>  input_df <span class="ot">&lt;-</span> week_data<span class="sc">$</span>input</span>
+<span id="cb2-150"><a href="#cb2-150" aria-hidden="true" tabindex="-1"></a>  output_df <span class="ot">&lt;-</span> week_data<span class="sc">$</span>output</span>
+<span id="cb2-151"><a href="#cb2-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-152"><a href="#cb2-152" aria-hidden="true" tabindex="-1"></a>  plays <span class="ot">&lt;-</span> input_df <span class="sc">|&gt;</span> <span class="fu">distinct</span>(game_id, play_id)</span>
 <span id="cb2-153"><a href="#cb2-153" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-154"><a href="#cb2-154" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(res)) {</span>
-<span id="cb2-155"><a href="#cb2-155" aria-hidden="true" tabindex="-1"></a>      all_features[[<span class="fu">length</span>(all_features) <span class="sc">+</span> <span class="dv">1</span>]] <span class="ot">&lt;-</span> res<span class="sc">$</span>play_features</span>
-<span id="cb2-156"><a href="#cb2-156" aria-hidden="true" tabindex="-1"></a>      all_trajectories[[<span class="fu">length</span>(all_trajectories) <span class="sc">+</span> <span class="dv">1</span>]] <span class="ot">&lt;-</span> res<span class="sc">$</span>trajectory</span>
-<span id="cb2-157"><a href="#cb2-157" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-154"><a href="#cb2-154" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Processing"</span>, <span class="fu">nrow</span>(plays), <span class="st">"plays..."</span>))</span>
+<span id="cb2-155"><a href="#cb2-155" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-156"><a href="#cb2-156" aria-hidden="true" tabindex="-1"></a>  all_features <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb2-157"><a href="#cb2-157" aria-hidden="true" tabindex="-1"></a>  all_trajectories <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
 <span id="cb2-158"><a href="#cb2-158" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (i <span class="sc">%%</span> <span class="dv">100</span> <span class="sc">==</span> <span class="dv">0</span>) <span class="fu">cat</span>(<span class="st">"."</span>)</span>
-<span id="cb2-160"><a href="#cb2-160" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb2-161"><a href="#cb2-161" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(plays)) {</span>
+<span id="cb2-160"><a href="#cb2-160" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> plays[i, ]</span>
+<span id="cb2-161"><a href="#cb2-161" aria-hidden="true" tabindex="-1"></a>    res <span class="ot">&lt;-</span> <span class="fu">compute_play_separation</span>(p<span class="sc">$</span>game_id, p<span class="sc">$</span>play_id, input_df, output_df)</span>
 <span id="cb2-162"><a href="#cb2-162" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-163"><a href="#cb2-163" aria-hidden="true" tabindex="-1"></a>  features_df <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(all_features) <span class="sc">&gt;</span> <span class="dv">0</span>) dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(all_features) <span class="cf">else</span> <span class="fu">tibble</span>()</span>
-<span id="cb2-164"><a href="#cb2-164" aria-hidden="true" tabindex="-1"></a>  traj_df <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(all_trajectories) <span class="sc">&gt;</span> <span class="dv">0</span>) dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(all_trajectories) <span class="cf">else</span> <span class="fu">tibble</span>()</span>
-<span id="cb2-165"><a href="#cb2-165" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-166"><a href="#cb2-166" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb2-167"><a href="#cb2-167" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> features_df,</span>
-<span id="cb2-168"><a href="#cb2-168" aria-hidden="true" tabindex="-1"></a>    <span class="at">trajectories =</span> traj_df</span>
-<span id="cb2-169"><a href="#cb2-169" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb2-170"><a href="#cb2-170" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-163"><a href="#cb2-163" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(res)) {</span>
+<span id="cb2-164"><a href="#cb2-164" aria-hidden="true" tabindex="-1"></a>      all_features[[<span class="fu">length</span>(all_features) <span class="sc">+</span> <span class="dv">1</span>]] <span class="ot">&lt;-</span> res<span class="sc">$</span>play_features</span>
+<span id="cb2-165"><a href="#cb2-165" aria-hidden="true" tabindex="-1"></a>      all_trajectories[[<span class="fu">length</span>(all_trajectories) <span class="sc">+</span> <span class="dv">1</span>]] <span class="ot">&lt;-</span> res<span class="sc">$</span>trajectory</span>
+<span id="cb2-166"><a href="#cb2-166" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-167"><a href="#cb2-167" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-168"><a href="#cb2-168" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (i <span class="sc">%%</span> <span class="dv">100</span> <span class="sc">==</span> <span class="dv">0</span>) <span class="fu">cat</span>(<span class="st">"."</span>)</span>
+<span id="cb2-169"><a href="#cb2-169" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-170"><a href="#cb2-170" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
 <span id="cb2-171"><a href="#cb2-171" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-172"><a href="#cb2-172" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Main Execution (if run as script) ---</span></span>
-<span id="cb2-173"><a href="#cb2-173" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-174"><a href="#cb2-174" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">sys.nframe</span>() <span class="sc">==</span> <span class="dv">0</span>) {</span>
-<span id="cb2-175"><a href="#cb2-175" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Source helpers and loader from the same directory</span></span>
-<span id="cb2-176"><a href="#cb2-176" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="st">"src/utils_paths.R"</span>)) {</span>
-<span id="cb2-177"><a href="#cb2-177" aria-hidden="true" tabindex="-1"></a>    <span class="fu">source</span>(<span class="st">"src/utils_paths.R"</span>)</span>
-<span id="cb2-178"><a href="#cb2-178" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="st">"utils_paths.R"</span>)) {</span>
-<span id="cb2-179"><a href="#cb2-179" aria-hidden="true" tabindex="-1"></a>    <span class="fu">source</span>(<span class="st">"utils_paths.R"</span>)</span>
-<span id="cb2-180"><a href="#cb2-180" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
-<span id="cb2-181"><a href="#cb2-181" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Cannot find utils_paths.R"</span>)</span>
-<span id="cb2-182"><a href="#cb2-182" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb2-183"><a href="#cb2-183" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-184"><a href="#cb2-184" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="st">"src/00_load_data.R"</span>)) {</span>
-<span id="cb2-185"><a href="#cb2-185" aria-hidden="true" tabindex="-1"></a>    <span class="fu">source</span>(<span class="st">"src/00_load_data.R"</span>)</span>
-<span id="cb2-186"><a href="#cb2-186" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="st">"00_load_data.R"</span>)) {</span>
-<span id="cb2-187"><a href="#cb2-187" aria-hidden="true" tabindex="-1"></a>    <span class="fu">source</span>(<span class="st">"00_load_data.R"</span>)</span>
-<span id="cb2-188"><a href="#cb2-188" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
-<span id="cb2-189"><a href="#cb2-189" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Cannot find 00_load_data.R"</span>)</span>
-<span id="cb2-190"><a href="#cb2-190" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb2-191"><a href="#cb2-191" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-192"><a href="#cb2-192" aria-hidden="true" tabindex="-1"></a>  OUT_DIR <span class="ot">&lt;-</span> <span class="fu">get_proc_dir</span>()</span>
-<span id="cb2-193"><a href="#cb2-193" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-194"><a href="#cb2-194" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Processing weeks:"</span>, <span class="fu">paste</span>(WEEKS, <span class="at">collapse =</span> <span class="st">", "</span>)))</span>
-<span id="cb2-195"><a href="#cb2-195" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-196"><a href="#cb2-196" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (week <span class="cf">in</span> WEEKS) {</span>
-<span id="cb2-197"><a href="#cb2-197" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"--- Starting"</span>, week, <span class="st">"---"</span>))</span>
-<span id="cb2-198"><a href="#cb2-198" aria-hidden="true" tabindex="-1"></a>    week_data_list <span class="ot">&lt;-</span> <span class="fu">load_week_data</span>(week)</span>
-<span id="cb2-199"><a href="#cb2-199" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-200"><a href="#cb2-200" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">is.null</span>(week_data_list)) {</span>
-<span id="cb2-201"><a href="#cb2-201" aria-hidden="true" tabindex="-1"></a>      <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Skipping"</span>, week, <span class="st">"- data not found."</span>))</span>
-<span id="cb2-202"><a href="#cb2-202" aria-hidden="true" tabindex="-1"></a>      <span class="cf">next</span></span>
-<span id="cb2-203"><a href="#cb2-203" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-172"><a href="#cb2-172" aria-hidden="true" tabindex="-1"></a>  features_df <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(all_features) <span class="sc">&gt;</span> <span class="dv">0</span>) dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(all_features) <span class="cf">else</span> <span class="fu">tibble</span>()</span>
+<span id="cb2-173"><a href="#cb2-173" aria-hidden="true" tabindex="-1"></a>  traj_df <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(all_trajectories) <span class="sc">&gt;</span> <span class="dv">0</span>) dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(all_trajectories) <span class="cf">else</span> <span class="fu">tibble</span>()</span>
+<span id="cb2-174"><a href="#cb2-174" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-175"><a href="#cb2-175" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb2-176"><a href="#cb2-176" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> features_df,</span>
+<span id="cb2-177"><a href="#cb2-177" aria-hidden="true" tabindex="-1"></a>    <span class="at">trajectories =</span> traj_df</span>
+<span id="cb2-178"><a href="#cb2-178" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb2-179"><a href="#cb2-179" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-180"><a href="#cb2-180" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-181"><a href="#cb2-181" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Main Execution (if run as script) ---</span></span>
+<span id="cb2-182"><a href="#cb2-182" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-183"><a href="#cb2-183" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">sys.nframe</span>() <span class="sc">==</span> <span class="dv">0</span>) {</span>
+<span id="cb2-184"><a href="#cb2-184" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Source helpers and loader from the same directory</span></span>
+<span id="cb2-185"><a href="#cb2-185" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="st">"src/utils_paths.R"</span>)) {</span>
+<span id="cb2-186"><a href="#cb2-186" aria-hidden="true" tabindex="-1"></a>    <span class="fu">source</span>(<span class="st">"src/utils_paths.R"</span>)</span>
+<span id="cb2-187"><a href="#cb2-187" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="st">"utils_paths.R"</span>)) {</span>
+<span id="cb2-188"><a href="#cb2-188" aria-hidden="true" tabindex="-1"></a>    <span class="fu">source</span>(<span class="st">"utils_paths.R"</span>)</span>
+<span id="cb2-189"><a href="#cb2-189" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb2-190"><a href="#cb2-190" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Cannot find utils_paths.R"</span>)</span>
+<span id="cb2-191"><a href="#cb2-191" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-192"><a href="#cb2-192" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-193"><a href="#cb2-193" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="st">"src/00_load_data.R"</span>)) {</span>
+<span id="cb2-194"><a href="#cb2-194" aria-hidden="true" tabindex="-1"></a>    <span class="fu">source</span>(<span class="st">"src/00_load_data.R"</span>)</span>
+<span id="cb2-195"><a href="#cb2-195" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="st">"00_load_data.R"</span>)) {</span>
+<span id="cb2-196"><a href="#cb2-196" aria-hidden="true" tabindex="-1"></a>    <span class="fu">source</span>(<span class="st">"00_load_data.R"</span>)</span>
+<span id="cb2-197"><a href="#cb2-197" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb2-198"><a href="#cb2-198" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Cannot find 00_load_data.R"</span>)</span>
+<span id="cb2-199"><a href="#cb2-199" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-200"><a href="#cb2-200" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-201"><a href="#cb2-201" aria-hidden="true" tabindex="-1"></a>  OUT_DIR <span class="ot">&lt;-</span> <span class="fu">get_proc_dir</span>()</span>
+<span id="cb2-202"><a href="#cb2-202" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-203"><a href="#cb2-203" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Processing weeks:"</span>, <span class="fu">paste</span>(WEEKS, <span class="at">collapse =</span> <span class="st">", "</span>)))</span>
 <span id="cb2-204"><a href="#cb2-204" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-205"><a href="#cb2-205" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Building play-level feature table for"</span>, week, <span class="st">"..."</span>))</span>
-<span id="cb2-206"><a href="#cb2-206" aria-hidden="true" tabindex="-1"></a>    results <span class="ot">&lt;-</span> <span class="fu">build_play_feature_table</span>(week_data_list)</span>
-<span id="cb2-207"><a href="#cb2-207" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-208"><a href="#cb2-208" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Save Features</span></span>
-<span id="cb2-209"><a href="#cb2-209" aria-hidden="true" tabindex="-1"></a>    feat_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(OUT_DIR, <span class="fu">paste0</span>(<span class="st">"play_features_"</span>, week, <span class="st">".rds"</span>))</span>
-<span id="cb2-210"><a href="#cb2-210" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(results<span class="sc">$</span>features, feat_file)</span>
-<span id="cb2-211"><a href="#cb2-211" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-212"><a href="#cb2-212" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Save Trajectories (New!)</span></span>
-<span id="cb2-213"><a href="#cb2-213" aria-hidden="true" tabindex="-1"></a>    traj_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(OUT_DIR, <span class="fu">paste0</span>(<span class="st">"separation_trajectories_"</span>, week, <span class="st">".rds"</span>))</span>
-<span id="cb2-214"><a href="#cb2-214" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(results<span class="sc">$</span>trajectories, traj_file)</span>
-<span id="cb2-215"><a href="#cb2-215" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-216"><a href="#cb2-216" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Saved"</span>, feat_file, <span class="st">"and"</span>, traj_file))</span>
-<span id="cb2-217"><a href="#cb2-217" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-218"><a href="#cb2-218" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rm</span>(week_data_list, results)</span>
-<span id="cb2-219"><a href="#cb2-219" aria-hidden="true" tabindex="-1"></a>    <span class="fu">gc</span>()</span>
-<span id="cb2-220"><a href="#cb2-220" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb2-221"><a href="#cb2-221" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-205"><a href="#cb2-205" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (week <span class="cf">in</span> WEEKS) {</span>
+<span id="cb2-206"><a href="#cb2-206" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"--- Starting"</span>, week, <span class="st">"---"</span>))</span>
+<span id="cb2-207"><a href="#cb2-207" aria-hidden="true" tabindex="-1"></a>    week_data_list <span class="ot">&lt;-</span> <span class="fu">load_week_data</span>(week)</span>
+<span id="cb2-208"><a href="#cb2-208" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-209"><a href="#cb2-209" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">is.null</span>(week_data_list)) {</span>
+<span id="cb2-210"><a href="#cb2-210" aria-hidden="true" tabindex="-1"></a>      <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Skipping"</span>, week, <span class="st">"- data not found."</span>))</span>
+<span id="cb2-211"><a href="#cb2-211" aria-hidden="true" tabindex="-1"></a>      <span class="cf">next</span></span>
+<span id="cb2-212"><a href="#cb2-212" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-213"><a href="#cb2-213" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-214"><a href="#cb2-214" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Building play-level feature table for"</span>, week, <span class="st">"..."</span>))</span>
+<span id="cb2-215"><a href="#cb2-215" aria-hidden="true" tabindex="-1"></a>    results <span class="ot">&lt;-</span> <span class="fu">build_play_feature_table</span>(week_data_list)</span>
+<span id="cb2-216"><a href="#cb2-216" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-217"><a href="#cb2-217" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Save Features</span></span>
+<span id="cb2-218"><a href="#cb2-218" aria-hidden="true" tabindex="-1"></a>    feat_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(OUT_DIR, <span class="fu">paste0</span>(<span class="st">"play_features_"</span>, week, <span class="st">".rds"</span>))</span>
+<span id="cb2-219"><a href="#cb2-219" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(results<span class="sc">$</span>features, feat_file)</span>
+<span id="cb2-220"><a href="#cb2-220" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-221"><a href="#cb2-221" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Save Trajectories (New!)</span></span>
+<span id="cb2-222"><a href="#cb2-222" aria-hidden="true" tabindex="-1"></a>    traj_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(OUT_DIR, <span class="fu">paste0</span>(<span class="st">"separation_trajectories_"</span>, week, <span class="st">".rds"</span>))</span>
+<span id="cb2-223"><a href="#cb2-223" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(results<span class="sc">$</span>trajectories, traj_file)</span>
+<span id="cb2-224"><a href="#cb2-224" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-225"><a href="#cb2-225" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Saved"</span>, feat_file, <span class="st">"and"</span>, traj_file))</span>
+<span id="cb2-226"><a href="#cb2-226" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-227"><a href="#cb2-227" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rm</span>(week_data_list, results)</span>
+<span id="cb2-228"><a href="#cb2-228" aria-hidden="true" tabindex="-1"></a>    <span class="fu">gc</span>()</span>
+<span id="cb2-229"><a href="#cb2-229" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-230"><a href="#cb2-230" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 </section>
@@ -542,17 +513,10 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="methodology">3. Methodology</h2>
 <section id="inair-separation-added-iasa" class="level3">
 <h3 class="anchored" data-anchor-id="inair-separation-added-iasa">3.1 In‑Air Separation Added (IASA)</h3>
-<p>Our primary play‑level metric is <strong>In‑Air Separation Added (IASA)</strong>, defined as:</p>
-<p><span class="math display">\[
+<p>The play-level metric we have created is an In-Air Separation Added (IASA) model: <span class="math display">\[
 IASA = d_{catch} - d_{throw},
 \]</span></p>
-<p>where <span class="math inline">\(d_{throw}\)</span> is the distance (in yards) between the targeted receiver and the nearest defender at the throw frame, and <span class="math inline">\(d_{catch}\)</span> is the corresponding distance at the ball‑arrival frame. Positive IASA indicates that the receiver <strong>gained separation</strong> while the ball was in the air, whereas negative IASA indicates that the defender <strong>closed the gap</strong>.</p>
-<p>Interpreting IASA:</p>
-<ul>
-<li>A receiver with <span class="math inline">\(IASA = +1.0\)</span> yard turned a marginally contested target (<span class="math inline">\(d_{throw} = 2.5\)</span> yards) into a more open catch point (<span class="math inline">\(d_{catch} = 3.5\)</span> yards).</li>
-<li>A receiver with <span class="math inline">\(IASA = -1.5\)</span> yards may have started open but allowed a defender to re‑enter the passing lane by the catch.</li>
-</ul>
-<p>IASA is intentionally simple: it summarizes the net change in separation over the ball’s flight, while our other methods (Markov Lift and mixed‑effects modeling) provide more nuanced views.</p>
+<p>This measures the difference in distance (in yards) between the targeted receiver and nearest defender at the time of the throw and the ball arrival (catch, pass breakup, or incompletion). Note that a positive IASA indicates the receiver gained separation from their nearest defender, while a negative IASA indicates the defender got closer.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
@@ -679,28 +643,26 @@ IASA = d_{catch} - d_{throw},
 </section>
 <section id="separation-states-and-markov-lift" class="level3">
 <h3 class="anchored" data-anchor-id="separation-states-and-markov-lift">3.2 Separation States and Markov Lift</h3>
-<p>To study separation as a <strong>dynamic process</strong>, we discretize separation at each frame into four states:</p>
+<p>To take a deeper look at our problem, we utilize the Markov Lift method. We begin by analyzing separation as a dynamic process, using categorical variables to make the distance at each frame distinct:</p>
 <ul>
 <li><strong>S0 (Tight)</strong>: &lt; 1 yard</li>
 <li><strong>S1 (Moderate)</strong>: 1–3 yards</li>
 <li><strong>S2 (Open)</strong>: 3–5 yards</li>
 <li><strong>S3 (Wide Open)</strong>: &gt; 5 yards</li>
 </ul>
-<p>For each targeted route, we observe a sequence of states <span class="math inline">\((S_t)_{t=1}^T\)</span> during ball flight. We model these transitions with a first‑order <strong>Markov chain</strong>, estimating the transition probabilities:</p>
-<p><span class="math display">\[
+<p>We created a sequence for each play where each frame is assigned a separation category. We then model the probabilities with a first-order Markov chain that estimates the transition probabilities:<br>
+<span class="math display">\[
 P(S_{t+1} = j \mid S_t = i), \quad i, j \in \{0,1,2,3\}.
 \]</span></p>
-<p>The league‑wide transition matrix captures how likely a receiver is to maintain or change separation from frame to frame. The diagonal elements reflect <strong>state persistence</strong>, while off‑diagonal elements represent gains or losses in separation. In our implementation we compute separation trajectories and transitions for <strong>wide receivers and tight ends on forward‑pass targets</strong>, aligning the Markov analysis with the sample used for our IASA skill modeling.</p>
-<p>We focus on transitions from <strong>covered</strong> states (S0, S1) to <strong>open</strong> states (S2, S3). Define:</p>
-<p><span class="math display">\[
+<p>In words, we measure the probability of the separation category of the next frame given the previous one. The league-wide transition matrix measures how likely a receiver is to maintain or change separation from frame to frame. The change can either be stagnant, decreasing, or increasing. Next, conceptually grouping S0 and S1 into “covered” states and S2 and S3 into “open” states, we focus on the transition between these two groups. The following formula represents the probability of going from covered to open in a single frame:<br>
+<span class="math display">\[
 p^{\text{league}}_{\text{break}} = P(S_{t+1} \in \{2,3\} \mid S_t \in \{0,1\})
 \]</span></p>
-<p>as the league‑average probability of “breaking open” in a single frame. Empirically, this baseline is <strong>1.49% per frame</strong>.</p>
-<p>For each receiver, we compute an analogous empirical probability <span class="math inline">\(p^{\text{player}}_{\text{break}}\)</span> based on their frame‑level transitions. We then define <strong>Markov Lift</strong> as:</p>
-<p><span class="math display">\[
+<p>Per frame, this probability is 1.49%.</p>
+<p>Next, we calculate this model’s probability for each receiver based on their frame-level transition. We define Markov Lift as: <span class="math display">\[
 \text{Markov Lift} = p^{\text{player}}_{\text{break}} - p^{\text{league}}_{\text{break}}.
 \]</span></p>
-<p>Positive Markov Lift indicates that the receiver breaks open from coverage more often than an average NFL receiver, controlling for the fact that the event is rare on any single frame. This metric is naturally expressed in percentage points (e.g., “+6.2%”).</p>
+<p>This percentage measures if an individual receiver breaks open from often than the league average (a positive result) or vice versa.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
@@ -951,68 +913,93 @@ p^{\text{league}}_{\text{break}} = P(S_{t+1} \in \{2,3\} \mid S_t \in \{0,1\})
 <span id="cb4-245"><a href="#cb4-245" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Loading trajectories..."</span>)</span>
 <span id="cb4-246"><a href="#cb4-246" aria-hidden="true" tabindex="-1"></a>  traj <span class="ot">&lt;-</span> <span class="fu">load_trajectories</span>(PROC_DIR)</span>
 <span id="cb4-247"><a href="#cb4-247" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-248"><a href="#cb4-248" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Computing transitions..."</span>)</span>
-<span id="cb4-249"><a href="#cb4-249" aria-hidden="true" tabindex="-1"></a>  trans <span class="ot">&lt;-</span> <span class="fu">compute_transitions</span>(traj)</span>
+<span id="cb4-248"><a href="#cb4-248" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Computing Markov Lift for players (and league transition matrix)..."</span>)</span>
+<span id="cb4-249"><a href="#cb4-249" aria-hidden="true" tabindex="-1"></a>  raw_features <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(PROC_DIR, <span class="st">"analysis_full.rds"</span>))</span>
 <span id="cb4-250"><a href="#cb4-250" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-251"><a href="#cb4-251" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Estimating league transition matrix..."</span>)</span>
-<span id="cb4-252"><a href="#cb4-252" aria-hidden="true" tabindex="-1"></a>  tm <span class="ot">&lt;-</span> <span class="fu">estimate_transition_matrix</span>(trans)</span>
-<span id="cb4-253"><a href="#cb4-253" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(tm)</span>
-<span id="cb4-254"><a href="#cb4-254" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-255"><a href="#cb4-255" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Save plot</span></span>
-<span id="cb4-256"><a href="#cb4-256" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="fu">plot_transition_matrix</span>(tm)</span>
-<span id="cb4-257"><a href="#cb4-257" aria-hidden="true" tabindex="-1"></a>  FIG_DIR <span class="ot">&lt;-</span> <span class="fu">get_fig_dir</span>()</span>
-<span id="cb4-258"><a href="#cb4-258" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"markov_transitions.png"</span>), p, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
+<span id="cb4-251"><a href="#cb4-251" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Apply the same football filters used for IASA modeling where possible:</span></span>
+<span id="cb4-252"><a href="#cb4-252" aria-hidden="true" tabindex="-1"></a>  <span class="co">#   - Forward passes only (pass_length &gt; 0)</span></span>
+<span id="cb4-253"><a href="#cb4-253" aria-hidden="true" tabindex="-1"></a>  <span class="co">#   - Route-running positions only (WR / TE)</span></span>
+<span id="cb4-254"><a href="#cb4-254" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">all</span>(<span class="fu">c</span>(<span class="st">"pass_length"</span>, <span class="st">"targeted_position"</span>) <span class="sc">%in%</span> <span class="fu">names</span>(raw_features))) {</span>
+<span id="cb4-255"><a href="#cb4-255" aria-hidden="true" tabindex="-1"></a>    <span class="fu">warning</span>(<span class="st">"pass_length or targeted_position missing in analysis_full.rds; using all plays for Markov transitions and Lift."</span>)</span>
+<span id="cb4-256"><a href="#cb4-256" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-257"><a href="#cb4-257" aria-hidden="true" tabindex="-1"></a>    features_df <span class="ot">&lt;-</span> raw_features <span class="sc">|&gt;</span></span>
+<span id="cb4-258"><a href="#cb4-258" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(game_id, play_id, targeted_id)</span>
 <span id="cb4-259"><a href="#cb4-259" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-260"><a href="#cb4-260" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Computing Markov Lift for players..."</span>)</span>
-<span id="cb4-261"><a href="#cb4-261" aria-hidden="true" tabindex="-1"></a>  features_df <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(PROC_DIR, <span class="st">"analysis_full.rds"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb4-262"><a href="#cb4-262" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(game_id, play_id, targeted_id)</span>
-<span id="cb4-263"><a href="#cb4-263" aria-hidden="true" tabindex="-1"></a>  lift <span class="ot">&lt;-</span> <span class="fu">compute_markov_lift</span>(trans, features_df)</span>
-<span id="cb4-264"><a href="#cb4-264" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-265"><a href="#cb4-265" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Optionally add names if targeted_name is available in analysis data</span></span>
-<span id="cb4-266"><a href="#cb4-266" aria-hidden="true" tabindex="-1"></a>  df_names <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(PROC_DIR, <span class="st">"analysis_full.rds"</span>))</span>
-<span id="cb4-267"><a href="#cb4-267" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df_names)) {</span>
-<span id="cb4-268"><a href="#cb4-268" aria-hidden="true" tabindex="-1"></a>    name_map <span class="ot">&lt;-</span> df_names <span class="sc">|&gt;</span></span>
-<span id="cb4-269"><a href="#cb4-269" aria-hidden="true" tabindex="-1"></a>      <span class="fu">distinct</span>(targeted_id, targeted_name) <span class="sc">|&gt;</span></span>
-<span id="cb4-270"><a href="#cb4-270" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id))</span>
-<span id="cb4-271"><a href="#cb4-271" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-272"><a href="#cb4-272" aria-hidden="true" tabindex="-1"></a>    lift <span class="ot">&lt;-</span> lift <span class="sc">|&gt;</span></span>
-<span id="cb4-273"><a href="#cb4-273" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id)) <span class="sc">|&gt;</span></span>
-<span id="cb4-274"><a href="#cb4-274" aria-hidden="true" tabindex="-1"></a>      <span class="fu">left_join</span>(name_map, <span class="at">by =</span> <span class="st">"targeted_id"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb4-275"><a href="#cb4-275" aria-hidden="true" tabindex="-1"></a>      <span class="fu">relocate</span>(targeted_name, <span class="at">.before =</span> targeted_id)</span>
-<span id="cb4-276"><a href="#cb4-276" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb4-277"><a href="#cb4-277" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-278"><a href="#cb4-278" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">head</span>(lift, <span class="dv">10</span>))</span>
-<span id="cb4-279"><a href="#cb4-279" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-280"><a href="#cb4-280" aria-hidden="true" tabindex="-1"></a>  <span class="fu">write_csv</span>(lift, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"markov_lift_rankings.csv"</span>))</span>
-<span id="cb4-281"><a href="#cb4-281" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Saved markov_lift_rankings.csv"</span>)</span>
+<span id="cb4-260"><a href="#cb4-260" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Transitions from all targeted plays</span></span>
+<span id="cb4-261"><a href="#cb4-261" aria-hidden="true" tabindex="-1"></a>    trans <span class="ot">&lt;-</span> <span class="fu">compute_transitions</span>(traj)</span>
+<span id="cb4-262"><a href="#cb4-262" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb4-263"><a href="#cb4-263" aria-hidden="true" tabindex="-1"></a>    features_df <span class="ot">&lt;-</span> raw_features <span class="sc">|&gt;</span></span>
+<span id="cb4-264"><a href="#cb4-264" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(</span>
+<span id="cb4-265"><a href="#cb4-265" aria-hidden="true" tabindex="-1"></a>        <span class="sc">!</span><span class="fu">is.na</span>(pass_length),</span>
+<span id="cb4-266"><a href="#cb4-266" aria-hidden="true" tabindex="-1"></a>        pass_length <span class="sc">&gt;</span> <span class="dv">0</span>,</span>
+<span id="cb4-267"><a href="#cb4-267" aria-hidden="true" tabindex="-1"></a>        targeted_position <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"WR"</span>, <span class="st">"TE"</span>)</span>
+<span id="cb4-268"><a href="#cb4-268" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">|&gt;</span></span>
+<span id="cb4-269"><a href="#cb4-269" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(game_id, play_id, targeted_id, targeted_position, pass_length)</span>
+<span id="cb4-270"><a href="#cb4-270" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-271"><a href="#cb4-271" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Restrict trajectories / transitions to the same WR/TE forward-pass plays</span></span>
+<span id="cb4-272"><a href="#cb4-272" aria-hidden="true" tabindex="-1"></a>    valid_plays <span class="ot">&lt;-</span> features_df <span class="sc">|&gt;</span></span>
+<span id="cb4-273"><a href="#cb4-273" aria-hidden="true" tabindex="-1"></a>      <span class="fu">distinct</span>(game_id, play_id)</span>
+<span id="cb4-274"><a href="#cb4-274" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-275"><a href="#cb4-275" aria-hidden="true" tabindex="-1"></a>    trans <span class="ot">&lt;-</span> <span class="fu">compute_transitions</span>(traj) <span class="sc">|&gt;</span></span>
+<span id="cb4-276"><a href="#cb4-276" aria-hidden="true" tabindex="-1"></a>      <span class="fu">inner_join</span>(valid_plays, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"game_id"</span>, <span class="st">"play_id"</span>))</span>
+<span id="cb4-277"><a href="#cb4-277" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-278"><a href="#cb4-278" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-279"><a href="#cb4-279" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Estimating league transition matrix..."</span>)</span>
+<span id="cb4-280"><a href="#cb4-280" aria-hidden="true" tabindex="-1"></a>  tm <span class="ot">&lt;-</span> <span class="fu">estimate_transition_matrix</span>(trans)</span>
+<span id="cb4-281"><a href="#cb4-281" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(tm)</span>
 <span id="cb4-282"><a href="#cb4-282" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-283"><a href="#cb4-283" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- Bayesian Markov Lift (if brms is available) ---</span></span>
-<span id="cb4-284"><a href="#cb4-284" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Fitting Bayesian Markov Lift model (if brms is installed)..."</span>)</span>
-<span id="cb4-285"><a href="#cb4-285" aria-hidden="true" tabindex="-1"></a>  break_info <span class="ot">&lt;-</span> <span class="fu">compute_break_counts</span>(trans, features_df, <span class="at">min_transitions =</span> <span class="dv">50</span>)</span>
-<span id="cb4-286"><a href="#cb4-286" aria-hidden="true" tabindex="-1"></a>  bayes_markov <span class="ot">&lt;-</span> <span class="fu">fit_bayesian_markov_model</span>(break_info<span class="sc">$</span>break_df)</span>
-<span id="cb4-287"><a href="#cb4-287" aria-hidden="true" tabindex="-1"></a>  bayes_lift <span class="ot">&lt;-</span> <span class="fu">extract_bayesian_markov_lift</span>(bayes_markov, break_info<span class="sc">$</span>break_df, break_info<span class="sc">$</span>league_rate)</span>
-<span id="cb4-288"><a href="#cb4-288" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-289"><a href="#cb4-289" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(bayes_markov) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.null</span>(bayes_lift)) {</span>
-<span id="cb4-290"><a href="#cb4-290" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df_names)) {</span>
-<span id="cb4-291"><a href="#cb4-291" aria-hidden="true" tabindex="-1"></a>      name_map <span class="ot">&lt;-</span> df_names <span class="sc">|&gt;</span></span>
-<span id="cb4-292"><a href="#cb4-292" aria-hidden="true" tabindex="-1"></a>        <span class="fu">distinct</span>(targeted_id, targeted_name) <span class="sc">|&gt;</span></span>
-<span id="cb4-293"><a href="#cb4-293" aria-hidden="true" tabindex="-1"></a>        <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id))</span>
-<span id="cb4-294"><a href="#cb4-294" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-295"><a href="#cb4-295" aria-hidden="true" tabindex="-1"></a>      bayes_lift <span class="ot">&lt;-</span> bayes_lift <span class="sc">|&gt;</span></span>
-<span id="cb4-296"><a href="#cb4-296" aria-hidden="true" tabindex="-1"></a>        <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id)) <span class="sc">|&gt;</span></span>
-<span id="cb4-297"><a href="#cb4-297" aria-hidden="true" tabindex="-1"></a>        <span class="fu">left_join</span>(name_map, <span class="at">by =</span> <span class="st">"targeted_id"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb4-298"><a href="#cb4-298" aria-hidden="true" tabindex="-1"></a>        <span class="fu">relocate</span>(targeted_name, <span class="at">.before =</span> targeted_id)</span>
-<span id="cb4-299"><a href="#cb4-299" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb4-300"><a href="#cb4-300" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-301"><a href="#cb4-301" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Bayesian Markov Lift model fit successfully."</span>)</span>
-<span id="cb4-302"><a href="#cb4-302" aria-hidden="true" tabindex="-1"></a>    <span class="fu">print</span>(<span class="fu">head</span>(bayes_lift, <span class="dv">10</span>))</span>
-<span id="cb4-303"><a href="#cb4-303" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-304"><a href="#cb4-304" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(bayes_markov, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"markov_lift_bayes_model.rds"</span>))</span>
-<span id="cb4-305"><a href="#cb4-305" aria-hidden="true" tabindex="-1"></a>    <span class="fu">write_csv</span>(bayes_lift, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"markov_lift_rankings_bayes.csv"</span>))</span>
-<span id="cb4-306"><a href="#cb4-306" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
-<span id="cb4-307"><a href="#cb4-307" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Bayesian Markov Lift model not fit; skipping Bayesian lift export."</span>)</span>
-<span id="cb4-308"><a href="#cb4-308" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb4-309"><a href="#cb4-309" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-283"><a href="#cb4-283" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Save plot</span></span>
+<span id="cb4-284"><a href="#cb4-284" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="fu">plot_transition_matrix</span>(tm)</span>
+<span id="cb4-285"><a href="#cb4-285" aria-hidden="true" tabindex="-1"></a>  FIG_DIR <span class="ot">&lt;-</span> <span class="fu">get_fig_dir</span>()</span>
+<span id="cb4-286"><a href="#cb4-286" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"markov_transitions.png"</span>), p, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
+<span id="cb4-287"><a href="#cb4-287" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-288"><a href="#cb4-288" aria-hidden="true" tabindex="-1"></a>  lift <span class="ot">&lt;-</span> <span class="fu">compute_markov_lift</span>(trans, features_df)</span>
+<span id="cb4-289"><a href="#cb4-289" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-290"><a href="#cb4-290" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Optionally add names if targeted_name is available in analysis data</span></span>
+<span id="cb4-291"><a href="#cb4-291" aria-hidden="true" tabindex="-1"></a>  df_names <span class="ot">&lt;-</span> raw_features</span>
+<span id="cb4-292"><a href="#cb4-292" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df_names)) {</span>
+<span id="cb4-293"><a href="#cb4-293" aria-hidden="true" tabindex="-1"></a>    name_map <span class="ot">&lt;-</span> df_names <span class="sc">|&gt;</span></span>
+<span id="cb4-294"><a href="#cb4-294" aria-hidden="true" tabindex="-1"></a>      <span class="fu">distinct</span>(targeted_id, targeted_name) <span class="sc">|&gt;</span></span>
+<span id="cb4-295"><a href="#cb4-295" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id))</span>
+<span id="cb4-296"><a href="#cb4-296" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-297"><a href="#cb4-297" aria-hidden="true" tabindex="-1"></a>    lift <span class="ot">&lt;-</span> lift <span class="sc">|&gt;</span></span>
+<span id="cb4-298"><a href="#cb4-298" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id)) <span class="sc">|&gt;</span></span>
+<span id="cb4-299"><a href="#cb4-299" aria-hidden="true" tabindex="-1"></a>      <span class="fu">left_join</span>(name_map, <span class="at">by =</span> <span class="st">"targeted_id"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-300"><a href="#cb4-300" aria-hidden="true" tabindex="-1"></a>      <span class="fu">relocate</span>(targeted_name, <span class="at">.before =</span> targeted_id)</span>
+<span id="cb4-301"><a href="#cb4-301" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-302"><a href="#cb4-302" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-303"><a href="#cb4-303" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">head</span>(lift, <span class="dv">10</span>))</span>
+<span id="cb4-304"><a href="#cb4-304" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-305"><a href="#cb4-305" aria-hidden="true" tabindex="-1"></a>  <span class="fu">write_csv</span>(lift, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"markov_lift_rankings.csv"</span>))</span>
+<span id="cb4-306"><a href="#cb4-306" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Saved markov_lift_rankings.csv"</span>)</span>
+<span id="cb4-307"><a href="#cb4-307" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-308"><a href="#cb4-308" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- Bayesian Markov Lift (if brms is available) ---</span></span>
+<span id="cb4-309"><a href="#cb4-309" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Fitting Bayesian Markov Lift model (if brms is installed)..."</span>)</span>
+<span id="cb4-310"><a href="#cb4-310" aria-hidden="true" tabindex="-1"></a>  break_info <span class="ot">&lt;-</span> <span class="fu">compute_break_counts</span>(trans, features_df, <span class="at">min_transitions =</span> <span class="dv">50</span>)</span>
+<span id="cb4-311"><a href="#cb4-311" aria-hidden="true" tabindex="-1"></a>  bayes_markov <span class="ot">&lt;-</span> <span class="fu">fit_bayesian_markov_model</span>(break_info<span class="sc">$</span>break_df)</span>
+<span id="cb4-312"><a href="#cb4-312" aria-hidden="true" tabindex="-1"></a>  bayes_lift <span class="ot">&lt;-</span> <span class="fu">extract_bayesian_markov_lift</span>(bayes_markov, break_info<span class="sc">$</span>break_df, break_info<span class="sc">$</span>league_rate)</span>
+<span id="cb4-313"><a href="#cb4-313" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-314"><a href="#cb4-314" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(bayes_markov) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.null</span>(bayes_lift)) {</span>
+<span id="cb4-315"><a href="#cb4-315" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df_names)) {</span>
+<span id="cb4-316"><a href="#cb4-316" aria-hidden="true" tabindex="-1"></a>      name_map <span class="ot">&lt;-</span> df_names <span class="sc">|&gt;</span></span>
+<span id="cb4-317"><a href="#cb4-317" aria-hidden="true" tabindex="-1"></a>        <span class="fu">distinct</span>(targeted_id, targeted_name) <span class="sc">|&gt;</span></span>
+<span id="cb4-318"><a href="#cb4-318" aria-hidden="true" tabindex="-1"></a>        <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id))</span>
+<span id="cb4-319"><a href="#cb4-319" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-320"><a href="#cb4-320" aria-hidden="true" tabindex="-1"></a>      bayes_lift <span class="ot">&lt;-</span> bayes_lift <span class="sc">|&gt;</span></span>
+<span id="cb4-321"><a href="#cb4-321" aria-hidden="true" tabindex="-1"></a>        <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id)) <span class="sc">|&gt;</span></span>
+<span id="cb4-322"><a href="#cb4-322" aria-hidden="true" tabindex="-1"></a>        <span class="fu">left_join</span>(name_map, <span class="at">by =</span> <span class="st">"targeted_id"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-323"><a href="#cb4-323" aria-hidden="true" tabindex="-1"></a>        <span class="fu">relocate</span>(targeted_name, <span class="at">.before =</span> targeted_id)</span>
+<span id="cb4-324"><a href="#cb4-324" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-325"><a href="#cb4-325" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-326"><a href="#cb4-326" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Bayesian Markov Lift model fit successfully."</span>)</span>
+<span id="cb4-327"><a href="#cb4-327" aria-hidden="true" tabindex="-1"></a>    <span class="fu">print</span>(<span class="fu">head</span>(bayes_lift, <span class="dv">10</span>))</span>
+<span id="cb4-328"><a href="#cb4-328" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-329"><a href="#cb4-329" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(bayes_markov, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"markov_lift_bayes_model.rds"</span>))</span>
+<span id="cb4-330"><a href="#cb4-330" aria-hidden="true" tabindex="-1"></a>    <span class="fu">write_csv</span>(bayes_lift, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"markov_lift_rankings_bayes.csv"</span>))</span>
+<span id="cb4-331"><a href="#cb4-331" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb4-332"><a href="#cb4-332" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Bayesian Markov Lift model not fit; skipping Bayesian lift export."</span>)</span>
+<span id="cb4-333"><a href="#cb4-333" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-334"><a href="#cb4-334" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 </section>
@@ -1256,168 +1243,200 @@ IASA_{\text{play}} = \beta_0
 <span id="cb5-170"><a href="#cb5-170" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="st">"route_of_targeted_receiver"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) df<span class="sc">$</span>route_of_targeted_receiver <span class="ot">&lt;-</span> <span class="cn">NA_character_</span></span>
 <span id="cb5-171"><a href="#cb5-171" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="st">"team_coverage_man_zone"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) df<span class="sc">$</span>team_coverage_man_zone <span class="ot">&lt;-</span> <span class="cn">NA_character_</span></span>
 <span id="cb5-172"><a href="#cb5-172" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="st">"team_coverage_type"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) df<span class="sc">$</span>team_coverage_type <span class="ot">&lt;-</span> <span class="cn">NA_character_</span></span>
-<span id="cb5-173"><a href="#cb5-173" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-174"><a href="#cb5-174" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> df <span class="sc">|&gt;</span></span>
-<span id="cb5-175"><a href="#cb5-175" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb5-176"><a href="#cb5-176" aria-hidden="true" tabindex="-1"></a>      <span class="at">offense_formation =</span> <span class="fu">factor</span>(<span class="fu">replace_na</span>(offense_formation, <span class="st">"Unknown"</span>)),</span>
-<span id="cb5-177"><a href="#cb5-177" aria-hidden="true" tabindex="-1"></a>      <span class="at">receiver_alignment =</span> <span class="fu">factor</span>(<span class="fu">replace_na</span>(receiver_alignment, <span class="st">"Unknown"</span>)),</span>
-<span id="cb5-178"><a href="#cb5-178" aria-hidden="true" tabindex="-1"></a>      <span class="at">route_of_targeted_receiver =</span> <span class="fu">factor</span>(<span class="fu">replace_na</span>(route_of_targeted_receiver, <span class="st">"Unknown"</span>)),</span>
-<span id="cb5-179"><a href="#cb5-179" aria-hidden="true" tabindex="-1"></a>      <span class="at">team_coverage_man_zone =</span> <span class="fu">factor</span>(<span class="fu">replace_na</span>(team_coverage_man_zone, <span class="st">"Unknown"</span>)),</span>
-<span id="cb5-180"><a href="#cb5-180" aria-hidden="true" tabindex="-1"></a>      <span class="at">team_coverage_type =</span> <span class="fu">factor</span>(<span class="fu">replace_na</span>(team_coverage_type, <span class="st">"Unknown"</span>))</span>
-<span id="cb5-181"><a href="#cb5-181" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb5-182"><a href="#cb5-182" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-183"><a href="#cb5-183" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- Debugging Missing Values ---</span></span>
-<span id="cb5-184"><a href="#cb5-184" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Total rows loaded:"</span>, <span class="fu">nrow</span>(df)))</span>
-<span id="cb5-185"><a href="#cb5-185" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-186"><a href="#cb5-186" aria-hidden="true" tabindex="-1"></a>  missing_stats <span class="ot">&lt;-</span> df <span class="sc">|&gt;</span></span>
-<span id="cb5-187"><a href="#cb5-187" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(</span>
-<span id="cb5-188"><a href="#cb5-188" aria-hidden="true" tabindex="-1"></a>      <span class="at">missing_IASA =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(IASA)),</span>
-<span id="cb5-189"><a href="#cb5-189" aria-hidden="true" tabindex="-1"></a>      <span class="at">missing_air_time =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(air_time)),</span>
-<span id="cb5-190"><a href="#cb5-190" aria-hidden="true" tabindex="-1"></a>      <span class="at">missing_d_throw =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(d_throw)),</span>
-<span id="cb5-191"><a href="#cb5-191" aria-hidden="true" tabindex="-1"></a>      <span class="at">missing_d_catch =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(d_catch)),</span>
-<span id="cb5-192"><a href="#cb5-192" aria-hidden="true" tabindex="-1"></a>      <span class="at">missing_targeted_id =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(targeted_id)),</span>
-<span id="cb5-193"><a href="#cb5-193" aria-hidden="true" tabindex="-1"></a>      <span class="at">zero_air_time =</span> <span class="fu">sum</span>(air_time <span class="sc">==</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb5-194"><a href="#cb5-194" aria-hidden="true" tabindex="-1"></a>      <span class="at">negative_air_time =</span> <span class="fu">sum</span>(air_time <span class="sc">&lt;</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb5-195"><a href="#cb5-195" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb5-196"><a href="#cb5-196" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-197"><a href="#cb5-197" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="st">"Missing Value Counts:"</span>)</span>
-<span id="cb5-198"><a href="#cb5-198" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(missing_stats)</span>
-<span id="cb5-199"><a href="#cb5-199" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-200"><a href="#cb5-200" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Filter for valid data</span></span>
-<span id="cb5-201"><a href="#cb5-201" aria-hidden="true" tabindex="-1"></a>  <span class="co"># IMPORTANT: Ensure targeted_id is a factor for random effects</span></span>
-<span id="cb5-202"><a href="#cb5-202" aria-hidden="true" tabindex="-1"></a>  df_model <span class="ot">&lt;-</span> df <span class="sc">|&gt;</span></span>
-<span id="cb5-203"><a href="#cb5-203" aria-hidden="true" tabindex="-1"></a>    <span class="fu">drop_na</span>(IASA, air_time, d_throw, targeted_id, pass_length, defenders_in_the_box) <span class="sc">|&gt;</span></span>
-<span id="cb5-204"><a href="#cb5-204" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(air_time <span class="sc">&gt;=</span> <span class="dv">0</span>) <span class="sc">|&gt;</span> <span class="co"># Allow 0 air time? No, but &gt;= just in case floating point issues</span></span>
-<span id="cb5-205"><a href="#cb5-205" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb5-206"><a href="#cb5-206" aria-hidden="true" tabindex="-1"></a>      <span class="at">targeted_id =</span> <span class="fu">as.factor</span>(targeted_id),</span>
-<span id="cb5-207"><a href="#cb5-207" aria-hidden="true" tabindex="-1"></a>      <span class="at">game_id =</span> <span class="fu">as.factor</span>(game_id),</span>
-<span id="cb5-208"><a href="#cb5-208" aria-hidden="true" tabindex="-1"></a>      <span class="at">air_time_scaled =</span> <span class="fu">scale</span>(air_time)[, <span class="dv">1</span>],</span>
-<span id="cb5-209"><a href="#cb5-209" aria-hidden="true" tabindex="-1"></a>      <span class="at">d_throw_scaled =</span> <span class="fu">scale</span>(d_throw)[, <span class="dv">1</span>],</span>
-<span id="cb5-210"><a href="#cb5-210" aria-hidden="true" tabindex="-1"></a>      <span class="at">pass_length_scaled =</span> <span class="fu">scale</span>(pass_length)[, <span class="dv">1</span>],</span>
-<span id="cb5-211"><a href="#cb5-211" aria-hidden="true" tabindex="-1"></a>      <span class="at">defenders_in_the_box_scaled =</span> <span class="fu">scale</span>(defenders_in_the_box)[, <span class="dv">1</span>]</span>
-<span id="cb5-212"><a href="#cb5-212" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb5-213"><a href="#cb5-213" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-214"><a href="#cb5-214" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Fitting model on"</span>, <span class="fu">nrow</span>(df_model), <span class="st">"plays."</span>))</span>
-<span id="cb5-215"><a href="#cb5-215" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-216"><a href="#cb5-216" aria-hidden="true" tabindex="-1"></a>  <span class="co"># </span><span class="al">NOTE</span><span class="co">: If the dataset is small (e.g., only Week 1 valid plays),</span></span>
-<span id="cb5-217"><a href="#cb5-217" aria-hidden="true" tabindex="-1"></a>  <span class="co"># random effects might be estimated as zero (singular fit).</span></span>
-<span id="cb5-218"><a href="#cb5-218" aria-hidden="true" tabindex="-1"></a>  <span class="co"># This is expected with sparse data.</span></span>
-<span id="cb5-219"><a href="#cb5-219" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-220"><a href="#cb5-220" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit Model</span></span>
-<span id="cb5-221"><a href="#cb5-221" aria-hidden="true" tabindex="-1"></a>  mem_model <span class="ot">&lt;-</span> <span class="fu">fit_mixed_effects_model</span>(df_model)</span>
-<span id="cb5-222"><a href="#cb5-222" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-223"><a href="#cb5-223" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (lme4<span class="sc">::</span><span class="fu">isSingular</span>(mem_model)) {</span>
-<span id="cb5-224"><a href="#cb5-224" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Warning: mixed-effects model fit is singular."</span>)</span>
-<span id="cb5-225"><a href="#cb5-225" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb5-226"><a href="#cb5-226" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-227"><a href="#cb5-227" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Print Summary</span></span>
-<span id="cb5-228"><a href="#cb5-228" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">summary</span>(mem_model))</span>
-<span id="cb5-229"><a href="#cb5-229" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-230"><a href="#cb5-230" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- Model validation metrics (in-sample) ---</span></span>
-<span id="cb5-231"><a href="#cb5-231" aria-hidden="true" tabindex="-1"></a>  y_obs <span class="ot">&lt;-</span> df_model<span class="sc">$</span>IASA</span>
-<span id="cb5-232"><a href="#cb5-232" aria-hidden="true" tabindex="-1"></a>  y_hat <span class="ot">&lt;-</span> <span class="fu">fitted</span>(mem_model)</span>
-<span id="cb5-233"><a href="#cb5-233" aria-hidden="true" tabindex="-1"></a>  resid <span class="ot">&lt;-</span> y_obs <span class="sc">-</span> y_hat</span>
+<span id="cb5-173"><a href="#cb5-173" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Ensure pass / position fields exist (needed for football-correct filtering)</span></span>
+<span id="cb5-174"><a href="#cb5-174" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="st">"pass_length"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) df<span class="sc">$</span>pass_length <span class="ot">&lt;-</span> <span class="cn">NA_real_</span></span>
+<span id="cb5-175"><a href="#cb5-175" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="st">"pass_result"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) df<span class="sc">$</span>pass_result <span class="ot">&lt;-</span> <span class="cn">NA_character_</span></span>
+<span id="cb5-176"><a href="#cb5-176" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="st">"targeted_position"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) df<span class="sc">$</span>targeted_position <span class="ot">&lt;-</span> <span class="cn">NA_character_</span></span>
+<span id="cb5-177"><a href="#cb5-177" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-178"><a href="#cb5-178" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> df <span class="sc">|&gt;</span></span>
+<span id="cb5-179"><a href="#cb5-179" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb5-180"><a href="#cb5-180" aria-hidden="true" tabindex="-1"></a>      <span class="at">offense_formation =</span> <span class="fu">factor</span>(<span class="fu">replace_na</span>(offense_formation, <span class="st">"Unknown"</span>)),</span>
+<span id="cb5-181"><a href="#cb5-181" aria-hidden="true" tabindex="-1"></a>      <span class="at">receiver_alignment =</span> <span class="fu">factor</span>(<span class="fu">replace_na</span>(receiver_alignment, <span class="st">"Unknown"</span>)),</span>
+<span id="cb5-182"><a href="#cb5-182" aria-hidden="true" tabindex="-1"></a>      <span class="at">route_of_targeted_receiver =</span> <span class="fu">factor</span>(<span class="fu">replace_na</span>(route_of_targeted_receiver, <span class="st">"Unknown"</span>)),</span>
+<span id="cb5-183"><a href="#cb5-183" aria-hidden="true" tabindex="-1"></a>      <span class="at">team_coverage_man_zone =</span> <span class="fu">factor</span>(<span class="fu">replace_na</span>(team_coverage_man_zone, <span class="st">"Unknown"</span>)),</span>
+<span id="cb5-184"><a href="#cb5-184" aria-hidden="true" tabindex="-1"></a>      <span class="at">team_coverage_type =</span> <span class="fu">factor</span>(<span class="fu">replace_na</span>(team_coverage_type, <span class="st">"Unknown"</span>)),</span>
+<span id="cb5-185"><a href="#cb5-185" aria-hidden="true" tabindex="-1"></a>      <span class="at">targeted_position =</span> <span class="fu">replace_na</span>(targeted_position, <span class="st">"Unknown"</span>)</span>
+<span id="cb5-186"><a href="#cb5-186" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb5-187"><a href="#cb5-187" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-188"><a href="#cb5-188" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- Football-correct filtering (plays kept for modeling) ---</span></span>
+<span id="cb5-189"><a href="#cb5-189" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 1) Forward passes only (screens / pitches dropped via pass_length &gt; 0)</span></span>
+<span id="cb5-190"><a href="#cb5-190" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 2) Route-running positions only (WR / TE)</span></span>
+<span id="cb5-191"><a href="#cb5-191" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-192"><a href="#cb5-192" aria-hidden="true" tabindex="-1"></a>  df_filtered <span class="ot">&lt;-</span> df <span class="sc">|&gt;</span></span>
+<span id="cb5-193"><a href="#cb5-193" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(</span>
+<span id="cb5-194"><a href="#cb5-194" aria-hidden="true" tabindex="-1"></a>      <span class="sc">!</span><span class="fu">is.na</span>(pass_length),</span>
+<span id="cb5-195"><a href="#cb5-195" aria-hidden="true" tabindex="-1"></a>      pass_length <span class="sc">&gt;</span> <span class="dv">0</span>,</span>
+<span id="cb5-196"><a href="#cb5-196" aria-hidden="true" tabindex="-1"></a>      targeted_position <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"WR"</span>, <span class="st">"TE"</span>)</span>
+<span id="cb5-197"><a href="#cb5-197" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb5-198"><a href="#cb5-198" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-199"><a href="#cb5-199" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Total rows loaded:"</span>, <span class="fu">nrow</span>(df)))</span>
+<span id="cb5-200"><a href="#cb5-200" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Rows after football filters (forward passes, WR/TE):"</span>, <span class="fu">nrow</span>(df_filtered)))</span>
+<span id="cb5-201"><a href="#cb5-201" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-202"><a href="#cb5-202" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- Debugging Missing Values (post-filter) ---</span></span>
+<span id="cb5-203"><a href="#cb5-203" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-204"><a href="#cb5-204" aria-hidden="true" tabindex="-1"></a>  missing_stats <span class="ot">&lt;-</span> df_filtered <span class="sc">|&gt;</span></span>
+<span id="cb5-205"><a href="#cb5-205" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(</span>
+<span id="cb5-206"><a href="#cb5-206" aria-hidden="true" tabindex="-1"></a>      <span class="at">missing_IASA =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(IASA)),</span>
+<span id="cb5-207"><a href="#cb5-207" aria-hidden="true" tabindex="-1"></a>      <span class="at">missing_air_time =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(air_time)),</span>
+<span id="cb5-208"><a href="#cb5-208" aria-hidden="true" tabindex="-1"></a>      <span class="at">missing_d_throw =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(d_throw)),</span>
+<span id="cb5-209"><a href="#cb5-209" aria-hidden="true" tabindex="-1"></a>      <span class="at">missing_d_catch =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(d_catch)),</span>
+<span id="cb5-210"><a href="#cb5-210" aria-hidden="true" tabindex="-1"></a>      <span class="at">missing_targeted_id =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(targeted_id)),</span>
+<span id="cb5-211"><a href="#cb5-211" aria-hidden="true" tabindex="-1"></a>      <span class="at">zero_air_time =</span> <span class="fu">sum</span>(air_time <span class="sc">==</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb5-212"><a href="#cb5-212" aria-hidden="true" tabindex="-1"></a>      <span class="at">negative_air_time =</span> <span class="fu">sum</span>(air_time <span class="sc">&lt;</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb5-213"><a href="#cb5-213" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb5-214"><a href="#cb5-214" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-215"><a href="#cb5-215" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="st">"Missing Value Counts:"</span>)</span>
+<span id="cb5-216"><a href="#cb5-216" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(missing_stats)</span>
+<span id="cb5-217"><a href="#cb5-217" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-218"><a href="#cb5-218" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Filter for valid data</span></span>
+<span id="cb5-219"><a href="#cb5-219" aria-hidden="true" tabindex="-1"></a>  <span class="co"># IMPORTANT: Ensure targeted_id is a factor for random effects</span></span>
+<span id="cb5-220"><a href="#cb5-220" aria-hidden="true" tabindex="-1"></a>  df_model <span class="ot">&lt;-</span> df_filtered <span class="sc">|&gt;</span></span>
+<span id="cb5-221"><a href="#cb5-221" aria-hidden="true" tabindex="-1"></a>    <span class="fu">drop_na</span>(IASA, air_time, d_throw, targeted_id, pass_length, defenders_in_the_box) <span class="sc">|&gt;</span></span>
+<span id="cb5-222"><a href="#cb5-222" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(air_time <span class="sc">&gt;=</span> <span class="dv">0</span>) <span class="sc">|&gt;</span> <span class="co"># Allow 0 air time? No, but &gt;= just in case floating point issues</span></span>
+<span id="cb5-223"><a href="#cb5-223" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb5-224"><a href="#cb5-224" aria-hidden="true" tabindex="-1"></a>      <span class="at">targeted_id =</span> <span class="fu">as.factor</span>(targeted_id),</span>
+<span id="cb5-225"><a href="#cb5-225" aria-hidden="true" tabindex="-1"></a>      <span class="at">game_id =</span> <span class="fu">as.factor</span>(game_id),</span>
+<span id="cb5-226"><a href="#cb5-226" aria-hidden="true" tabindex="-1"></a>      <span class="at">targeted_position =</span> <span class="fu">factor</span>(targeted_position),</span>
+<span id="cb5-227"><a href="#cb5-227" aria-hidden="true" tabindex="-1"></a>      <span class="at">air_time_scaled =</span> <span class="fu">scale</span>(air_time)[, <span class="dv">1</span>],</span>
+<span id="cb5-228"><a href="#cb5-228" aria-hidden="true" tabindex="-1"></a>      <span class="at">d_throw_scaled =</span> <span class="fu">scale</span>(d_throw)[, <span class="dv">1</span>],</span>
+<span id="cb5-229"><a href="#cb5-229" aria-hidden="true" tabindex="-1"></a>      <span class="at">pass_length_scaled =</span> <span class="fu">scale</span>(pass_length)[, <span class="dv">1</span>],</span>
+<span id="cb5-230"><a href="#cb5-230" aria-hidden="true" tabindex="-1"></a>      <span class="at">defenders_in_the_box_scaled =</span> <span class="fu">scale</span>(defenders_in_the_box)[, <span class="dv">1</span>]</span>
+<span id="cb5-231"><a href="#cb5-231" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb5-232"><a href="#cb5-232" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-233"><a href="#cb5-233" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Fitting model on"</span>, <span class="fu">nrow</span>(df_model), <span class="st">"plays."</span>))</span>
 <span id="cb5-234"><a href="#cb5-234" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-235"><a href="#cb5-235" aria-hidden="true" tabindex="-1"></a>  rmse <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(resid<span class="sc">^</span><span class="dv">2</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
-<span id="cb5-236"><a href="#cb5-236" aria-hidden="true" tabindex="-1"></a>  mae <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">abs</span>(resid), <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb5-237"><a href="#cb5-237" aria-hidden="true" tabindex="-1"></a>  r2 <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">var</span>(resid, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span> <span class="fu">var</span>(y_obs, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb5-235"><a href="#cb5-235" aria-hidden="true" tabindex="-1"></a>  <span class="co"># </span><span class="al">NOTE</span><span class="co">: If the dataset is small (e.g., only Week 1 valid plays),</span></span>
+<span id="cb5-236"><a href="#cb5-236" aria-hidden="true" tabindex="-1"></a>  <span class="co"># random effects might be estimated as zero (singular fit).</span></span>
+<span id="cb5-237"><a href="#cb5-237" aria-hidden="true" tabindex="-1"></a>  <span class="co"># This is expected with sparse data.</span></span>
 <span id="cb5-238"><a href="#cb5-238" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-239"><a href="#cb5-239" aria-hidden="true" tabindex="-1"></a>  mem_metrics <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb5-240"><a href="#cb5-240" aria-hidden="true" tabindex="-1"></a>    <span class="at">metric =</span> <span class="fu">c</span>(<span class="st">"RMSE"</span>, <span class="st">"MAE"</span>, <span class="st">"Pseudo_R2"</span>),</span>
-<span id="cb5-241"><a href="#cb5-241" aria-hidden="true" tabindex="-1"></a>    <span class="at">value  =</span> <span class="fu">c</span>(rmse, mae, r2)</span>
-<span id="cb5-242"><a href="#cb5-242" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb5-243"><a href="#cb5-243" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-244"><a href="#cb5-244" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Mixed-effects model metrics:"</span>)</span>
-<span id="cb5-245"><a href="#cb5-245" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(mem_metrics)</span>
-<span id="cb5-246"><a href="#cb5-246" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-247"><a href="#cb5-247" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- Diagnostic figures ---</span></span>
-<span id="cb5-248"><a href="#cb5-248" aria-hidden="true" tabindex="-1"></a>  diag_df <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb5-249"><a href="#cb5-249" aria-hidden="true" tabindex="-1"></a>    <span class="at">IASA =</span> y_obs,</span>
-<span id="cb5-250"><a href="#cb5-250" aria-hidden="true" tabindex="-1"></a>    <span class="at">fitted =</span> y_hat,</span>
-<span id="cb5-251"><a href="#cb5-251" aria-hidden="true" tabindex="-1"></a>    <span class="at">resid =</span> resid</span>
-<span id="cb5-252"><a href="#cb5-252" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-239"><a href="#cb5-239" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit Model</span></span>
+<span id="cb5-240"><a href="#cb5-240" aria-hidden="true" tabindex="-1"></a>  mem_model <span class="ot">&lt;-</span> <span class="fu">fit_mixed_effects_model</span>(df_model)</span>
+<span id="cb5-241"><a href="#cb5-241" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-242"><a href="#cb5-242" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (lme4<span class="sc">::</span><span class="fu">isSingular</span>(mem_model)) {</span>
+<span id="cb5-243"><a href="#cb5-243" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Warning: mixed-effects model fit is singular."</span>)</span>
+<span id="cb5-244"><a href="#cb5-244" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-245"><a href="#cb5-245" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-246"><a href="#cb5-246" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Print Summary</span></span>
+<span id="cb5-247"><a href="#cb5-247" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">summary</span>(mem_model))</span>
+<span id="cb5-248"><a href="#cb5-248" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-249"><a href="#cb5-249" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- Model validation metrics (in-sample) ---</span></span>
+<span id="cb5-250"><a href="#cb5-250" aria-hidden="true" tabindex="-1"></a>  y_obs <span class="ot">&lt;-</span> df_model<span class="sc">$</span>IASA</span>
+<span id="cb5-251"><a href="#cb5-251" aria-hidden="true" tabindex="-1"></a>  y_hat <span class="ot">&lt;-</span> <span class="fu">fitted</span>(mem_model)</span>
+<span id="cb5-252"><a href="#cb5-252" aria-hidden="true" tabindex="-1"></a>  resid <span class="ot">&lt;-</span> y_obs <span class="sc">-</span> y_hat</span>
 <span id="cb5-253"><a href="#cb5-253" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-254"><a href="#cb5-254" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Determine figure directory</span></span>
-<span id="cb5-255"><a href="#cb5-255" aria-hidden="true" tabindex="-1"></a>  FIG_DIR <span class="ot">&lt;-</span> <span class="fu">get_fig_dir</span>()</span>
-<span id="cb5-256"><a href="#cb5-256" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-257"><a href="#cb5-257" aria-hidden="true" tabindex="-1"></a>  p_fit <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(diag_df, <span class="fu">aes</span>(<span class="at">x =</span> fitted, <span class="at">y =</span> IASA)) <span class="sc">+</span></span>
-<span id="cb5-258"><a href="#cb5-258" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.3</span>, <span class="at">color =</span> <span class="st">"#0072B2"</span>) <span class="sc">+</span></span>
-<span id="cb5-259"><a href="#cb5-259" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_abline</span>(<span class="at">slope =</span> <span class="dv">1</span>, <span class="at">intercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">color =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
-<span id="cb5-260"><a href="#cb5-260" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb5-261"><a href="#cb5-261" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb5-262"><a href="#cb5-262" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Mixed-Effects Model: Fitted vs Observed IASA"</span>,</span>
-<span id="cb5-263"><a href="#cb5-263" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Fitted IASA"</span>,</span>
-<span id="cb5-264"><a href="#cb5-264" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Observed IASA"</span></span>
-<span id="cb5-265"><a href="#cb5-265" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb5-266"><a href="#cb5-266" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-267"><a href="#cb5-267" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(</span>
-<span id="cb5-268"><a href="#cb5-268" aria-hidden="true" tabindex="-1"></a>    <span class="at">filename =</span> <span class="fu">file.path</span>(FIG_DIR, <span class="st">"mixed_effects_fitted_vs_observed.png"</span>),</span>
-<span id="cb5-269"><a href="#cb5-269" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot =</span> p_fit,</span>
-<span id="cb5-270"><a href="#cb5-270" aria-hidden="true" tabindex="-1"></a>    <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>, <span class="at">dpi =</span> <span class="dv">300</span></span>
+<span id="cb5-254"><a href="#cb5-254" aria-hidden="true" tabindex="-1"></a>  rmse <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(resid<span class="sc">^</span><span class="dv">2</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb5-255"><a href="#cb5-255" aria-hidden="true" tabindex="-1"></a>  mae <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">abs</span>(resid), <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb5-256"><a href="#cb5-256" aria-hidden="true" tabindex="-1"></a>  r2 <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">var</span>(resid, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span> <span class="fu">var</span>(y_obs, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb5-257"><a href="#cb5-257" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-258"><a href="#cb5-258" aria-hidden="true" tabindex="-1"></a>  mem_metrics <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb5-259"><a href="#cb5-259" aria-hidden="true" tabindex="-1"></a>    <span class="at">metric =</span> <span class="fu">c</span>(<span class="st">"RMSE"</span>, <span class="st">"MAE"</span>, <span class="st">"Pseudo_R2"</span>),</span>
+<span id="cb5-260"><a href="#cb5-260" aria-hidden="true" tabindex="-1"></a>    <span class="at">value  =</span> <span class="fu">c</span>(rmse, mae, r2)</span>
+<span id="cb5-261"><a href="#cb5-261" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-262"><a href="#cb5-262" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-263"><a href="#cb5-263" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Mixed-effects model metrics:"</span>)</span>
+<span id="cb5-264"><a href="#cb5-264" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(mem_metrics)</span>
+<span id="cb5-265"><a href="#cb5-265" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-266"><a href="#cb5-266" aria-hidden="true" tabindex="-1"></a>  <span class="co"># --- Diagnostic figures ---</span></span>
+<span id="cb5-267"><a href="#cb5-267" aria-hidden="true" tabindex="-1"></a>  diag_df <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb5-268"><a href="#cb5-268" aria-hidden="true" tabindex="-1"></a>    <span class="at">IASA =</span> y_obs,</span>
+<span id="cb5-269"><a href="#cb5-269" aria-hidden="true" tabindex="-1"></a>    <span class="at">fitted =</span> y_hat,</span>
+<span id="cb5-270"><a href="#cb5-270" aria-hidden="true" tabindex="-1"></a>    <span class="at">resid =</span> resid</span>
 <span id="cb5-271"><a href="#cb5-271" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb5-272"><a href="#cb5-272" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-273"><a href="#cb5-273" aria-hidden="true" tabindex="-1"></a>  p_resid <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(diag_df, <span class="fu">aes</span>(<span class="at">x =</span> resid)) <span class="sc">+</span></span>
-<span id="cb5-274"><a href="#cb5-274" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">40</span>, <span class="at">fill =</span> <span class="st">"#D55E00"</span>, <span class="at">color =</span> <span class="st">"white"</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
-<span id="cb5-275"><a href="#cb5-275" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb5-276"><a href="#cb5-276" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb5-277"><a href="#cb5-277" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Mixed-Effects Model Residuals (IASA)"</span>,</span>
-<span id="cb5-278"><a href="#cb5-278" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Residual"</span>,</span>
-<span id="cb5-279"><a href="#cb5-279" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Count"</span></span>
-<span id="cb5-280"><a href="#cb5-280" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb5-281"><a href="#cb5-281" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-282"><a href="#cb5-282" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(</span>
-<span id="cb5-283"><a href="#cb5-283" aria-hidden="true" tabindex="-1"></a>    <span class="at">filename =</span> <span class="fu">file.path</span>(FIG_DIR, <span class="st">"mixed_effects_residuals_hist.png"</span>),</span>
-<span id="cb5-284"><a href="#cb5-284" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot =</span> p_resid,</span>
-<span id="cb5-285"><a href="#cb5-285" aria-hidden="true" tabindex="-1"></a>    <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>, <span class="at">dpi =</span> <span class="dv">300</span></span>
-<span id="cb5-286"><a href="#cb5-286" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb5-287"><a href="#cb5-287" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-288"><a href="#cb5-288" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Extract and Save Rankings</span></span>
-<span id="cb5-289"><a href="#cb5-289" aria-hidden="true" tabindex="-1"></a>  rankings <span class="ot">&lt;-</span> <span class="fu">extract_receiver_rankings</span>(mem_model)</span>
-<span id="cb5-290"><a href="#cb5-290" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-291"><a href="#cb5-291" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Join with player names from analysis data if available</span></span>
-<span id="cb5-292"><a href="#cb5-292" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) {</span>
-<span id="cb5-293"><a href="#cb5-293" aria-hidden="true" tabindex="-1"></a>    name_map <span class="ot">&lt;-</span> df <span class="sc">|&gt;</span></span>
-<span id="cb5-294"><a href="#cb5-294" aria-hidden="true" tabindex="-1"></a>      <span class="fu">distinct</span>(targeted_id, targeted_name) <span class="sc">|&gt;</span></span>
-<span id="cb5-295"><a href="#cb5-295" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id))</span>
-<span id="cb5-296"><a href="#cb5-296" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-297"><a href="#cb5-297" aria-hidden="true" tabindex="-1"></a>    rankings <span class="ot">&lt;-</span> rankings <span class="sc">|&gt;</span></span>
-<span id="cb5-298"><a href="#cb5-298" aria-hidden="true" tabindex="-1"></a>      <span class="fu">left_join</span>(name_map, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"nfl_id"</span> <span class="ot">=</span> <span class="st">"targeted_id"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb5-299"><a href="#cb5-299" aria-hidden="true" tabindex="-1"></a>      <span class="fu">relocate</span>(targeted_name, <span class="at">.before =</span> nfl_id)</span>
-<span id="cb5-300"><a href="#cb5-300" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb5-301"><a href="#cb5-301" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-302"><a href="#cb5-302" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">head</span>(rankings, <span class="dv">10</span>))</span>
-<span id="cb5-303"><a href="#cb5-303" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-304"><a href="#cb5-304" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit Bayesian version of the mixed-effects model (if brms is available)</span></span>
-<span id="cb5-305"><a href="#cb5-305" aria-hidden="true" tabindex="-1"></a>  bayes_model <span class="ot">&lt;-</span> <span class="fu">fit_bayesian_iasa_model</span>(df_model)</span>
-<span id="cb5-306"><a href="#cb5-306" aria-hidden="true" tabindex="-1"></a>  bayes_rankings <span class="ot">&lt;-</span> <span class="fu">extract_bayesian_receiver_rankings</span>(bayes_model)</span>
-<span id="cb5-307"><a href="#cb5-307" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-308"><a href="#cb5-308" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(bayes_model) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.null</span>(bayes_rankings)) {</span>
-<span id="cb5-309"><a href="#cb5-309" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="st">"targeted_name"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) {</span>
-<span id="cb5-310"><a href="#cb5-310" aria-hidden="true" tabindex="-1"></a>      name_map <span class="ot">&lt;-</span> df <span class="sc">|&gt;</span></span>
-<span id="cb5-311"><a href="#cb5-311" aria-hidden="true" tabindex="-1"></a>        <span class="fu">distinct</span>(targeted_id, targeted_name) <span class="sc">|&gt;</span></span>
-<span id="cb5-312"><a href="#cb5-312" aria-hidden="true" tabindex="-1"></a>        <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id))</span>
-<span id="cb5-313"><a href="#cb5-313" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-314"><a href="#cb5-314" aria-hidden="true" tabindex="-1"></a>      bayes_rankings <span class="ot">&lt;-</span> bayes_rankings <span class="sc">|&gt;</span></span>
-<span id="cb5-315"><a href="#cb5-315" aria-hidden="true" tabindex="-1"></a>        <span class="fu">left_join</span>(name_map, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"nfl_id"</span> <span class="ot">=</span> <span class="st">"targeted_id"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb5-316"><a href="#cb5-316" aria-hidden="true" tabindex="-1"></a>        <span class="fu">relocate</span>(targeted_name, <span class="at">.before =</span> nfl_id)</span>
-<span id="cb5-317"><a href="#cb5-317" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-273"><a href="#cb5-273" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Determine figure directory</span></span>
+<span id="cb5-274"><a href="#cb5-274" aria-hidden="true" tabindex="-1"></a>  FIG_DIR <span class="ot">&lt;-</span> <span class="fu">get_fig_dir</span>()</span>
+<span id="cb5-275"><a href="#cb5-275" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-276"><a href="#cb5-276" aria-hidden="true" tabindex="-1"></a>  p_fit <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(diag_df, <span class="fu">aes</span>(<span class="at">x =</span> fitted, <span class="at">y =</span> IASA)) <span class="sc">+</span></span>
+<span id="cb5-277"><a href="#cb5-277" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.3</span>, <span class="at">color =</span> <span class="st">"#0072B2"</span>) <span class="sc">+</span></span>
+<span id="cb5-278"><a href="#cb5-278" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_abline</span>(<span class="at">slope =</span> <span class="dv">1</span>, <span class="at">intercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">color =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
+<span id="cb5-279"><a href="#cb5-279" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb5-280"><a href="#cb5-280" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb5-281"><a href="#cb5-281" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Mixed-Effects Model: Fitted vs Observed IASA"</span>,</span>
+<span id="cb5-282"><a href="#cb5-282" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Fitted IASA"</span>,</span>
+<span id="cb5-283"><a href="#cb5-283" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Observed IASA"</span></span>
+<span id="cb5-284"><a href="#cb5-284" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb5-285"><a href="#cb5-285" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-286"><a href="#cb5-286" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(</span>
+<span id="cb5-287"><a href="#cb5-287" aria-hidden="true" tabindex="-1"></a>    <span class="at">filename =</span> <span class="fu">file.path</span>(FIG_DIR, <span class="st">"mixed_effects_fitted_vs_observed.png"</span>),</span>
+<span id="cb5-288"><a href="#cb5-288" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot =</span> p_fit,</span>
+<span id="cb5-289"><a href="#cb5-289" aria-hidden="true" tabindex="-1"></a>    <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>, <span class="at">dpi =</span> <span class="dv">300</span></span>
+<span id="cb5-290"><a href="#cb5-290" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-291"><a href="#cb5-291" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-292"><a href="#cb5-292" aria-hidden="true" tabindex="-1"></a>  p_resid <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(diag_df, <span class="fu">aes</span>(<span class="at">x =</span> resid)) <span class="sc">+</span></span>
+<span id="cb5-293"><a href="#cb5-293" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">40</span>, <span class="at">fill =</span> <span class="st">"#D55E00"</span>, <span class="at">color =</span> <span class="st">"white"</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb5-294"><a href="#cb5-294" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb5-295"><a href="#cb5-295" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb5-296"><a href="#cb5-296" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Mixed-Effects Model Residuals (IASA)"</span>,</span>
+<span id="cb5-297"><a href="#cb5-297" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Residual"</span>,</span>
+<span id="cb5-298"><a href="#cb5-298" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Count"</span></span>
+<span id="cb5-299"><a href="#cb5-299" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb5-300"><a href="#cb5-300" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-301"><a href="#cb5-301" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(</span>
+<span id="cb5-302"><a href="#cb5-302" aria-hidden="true" tabindex="-1"></a>    <span class="at">filename =</span> <span class="fu">file.path</span>(FIG_DIR, <span class="st">"mixed_effects_residuals_hist.png"</span>),</span>
+<span id="cb5-303"><a href="#cb5-303" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot =</span> p_resid,</span>
+<span id="cb5-304"><a href="#cb5-304" aria-hidden="true" tabindex="-1"></a>    <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>, <span class="at">dpi =</span> <span class="dv">300</span></span>
+<span id="cb5-305"><a href="#cb5-305" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-306"><a href="#cb5-306" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-307"><a href="#cb5-307" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Extract and Save Rankings</span></span>
+<span id="cb5-308"><a href="#cb5-308" aria-hidden="true" tabindex="-1"></a>  rankings <span class="ot">&lt;-</span> <span class="fu">extract_receiver_rankings</span>(mem_model)</span>
+<span id="cb5-309"><a href="#cb5-309" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-310"><a href="#cb5-310" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Target counts (forward-pass targets per receiver used in modeling)</span></span>
+<span id="cb5-311"><a href="#cb5-311" aria-hidden="true" tabindex="-1"></a>  target_counts <span class="ot">&lt;-</span> df_model <span class="sc">|&gt;</span></span>
+<span id="cb5-312"><a href="#cb5-312" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(targeted_id) <span class="sc">|&gt;</span></span>
+<span id="cb5-313"><a href="#cb5-313" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(</span>
+<span id="cb5-314"><a href="#cb5-314" aria-hidden="true" tabindex="-1"></a>      <span class="at">n_targets =</span> <span class="fu">n</span>(),</span>
+<span id="cb5-315"><a href="#cb5-315" aria-hidden="true" tabindex="-1"></a>      <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb5-316"><a href="#cb5-316" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
+<span id="cb5-317"><a href="#cb5-317" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id))</span>
 <span id="cb5-318"><a href="#cb5-318" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-319"><a href="#cb5-319" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Bayesian mixed-effects model for IASA fit successfully."</span>)</span>
-<span id="cb5-320"><a href="#cb5-320" aria-hidden="true" tabindex="-1"></a>    <span class="fu">print</span>(<span class="fu">head</span>(bayes_rankings, <span class="dv">10</span>))</span>
-<span id="cb5-321"><a href="#cb5-321" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-322"><a href="#cb5-322" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(bayes_model, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"mixed_effects_model_bayes.rds"</span>))</span>
-<span id="cb5-323"><a href="#cb5-323" aria-hidden="true" tabindex="-1"></a>    <span class="fu">write_csv</span>(bayes_rankings, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"receiver_rankings_bayes.csv"</span>))</span>
-<span id="cb5-324"><a href="#cb5-324" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
-<span id="cb5-325"><a href="#cb5-325" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Bayesian IASA model not fit; skipping Bayesian rankings export."</span>)</span>
-<span id="cb5-326"><a href="#cb5-326" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb5-327"><a href="#cb5-327" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-328"><a href="#cb5-328" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Save outputs</span></span>
-<span id="cb5-329"><a href="#cb5-329" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(mem_model, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"mixed_effects_model.rds"</span>))</span>
-<span id="cb5-330"><a href="#cb5-330" aria-hidden="true" tabindex="-1"></a>  <span class="fu">write_csv</span>(rankings, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"receiver_rankings.csv"</span>))</span>
-<span id="cb5-331"><a href="#cb5-331" aria-hidden="true" tabindex="-1"></a>  <span class="fu">write_csv</span>(mem_metrics, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"mixed_effects_metrics.csv"</span>))</span>
-<span id="cb5-332"><a href="#cb5-332" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-333"><a href="#cb5-333" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Saved model and rankings to"</span>, PROC_DIR))</span>
-<span id="cb5-334"><a href="#cb5-334" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-319"><a href="#cb5-319" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Join with player names / positions from the (filtered) analysis data if available</span></span>
+<span id="cb5-320"><a href="#cb5-320" aria-hidden="true" tabindex="-1"></a>  meta_map <span class="ot">&lt;-</span> df_filtered <span class="sc">|&gt;</span></span>
+<span id="cb5-321"><a href="#cb5-321" aria-hidden="true" tabindex="-1"></a>    <span class="fu">distinct</span>(targeted_id, targeted_name, targeted_position) <span class="sc">|&gt;</span></span>
+<span id="cb5-322"><a href="#cb5-322" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">targeted_id =</span> <span class="fu">as.character</span>(targeted_id))</span>
+<span id="cb5-323"><a href="#cb5-323" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-324"><a href="#cb5-324" aria-hidden="true" tabindex="-1"></a>  rankings_full <span class="ot">&lt;-</span> rankings <span class="sc">|&gt;</span></span>
+<span id="cb5-325"><a href="#cb5-325" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(meta_map, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"nfl_id"</span> <span class="ot">=</span> <span class="st">"targeted_id"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-326"><a href="#cb5-326" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(target_counts, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"nfl_id"</span> <span class="ot">=</span> <span class="st">"targeted_id"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-327"><a href="#cb5-327" aria-hidden="true" tabindex="-1"></a>    <span class="fu">relocate</span>(targeted_name, <span class="at">.before =</span> nfl_id) <span class="sc">|&gt;</span></span>
+<span id="cb5-328"><a href="#cb5-328" aria-hidden="true" tabindex="-1"></a>    <span class="fu">relocate</span>(targeted_position, <span class="at">.after =</span> targeted_name)</span>
+<span id="cb5-329"><a href="#cb5-329" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-330"><a href="#cb5-330" aria-hidden="true" tabindex="-1"></a>  rankings_qualified <span class="ot">&lt;-</span> rankings_full <span class="sc">|&gt;</span></span>
+<span id="cb5-331"><a href="#cb5-331" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(n_targets <span class="sc">&gt;=</span> <span class="dv">30</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-332"><a href="#cb5-332" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(<span class="fu">desc</span>(iasa_over_expected))</span>
+<span id="cb5-333"><a href="#cb5-333" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-334"><a href="#cb5-334" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">head</span>(rankings_qualified, <span class="dv">10</span>))</span>
+<span id="cb5-335"><a href="#cb5-335" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-336"><a href="#cb5-336" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit Bayesian version of the mixed-effects model (if brms is available)</span></span>
+<span id="cb5-337"><a href="#cb5-337" aria-hidden="true" tabindex="-1"></a>  bayes_model <span class="ot">&lt;-</span> <span class="fu">fit_bayesian_iasa_model</span>(df_model)</span>
+<span id="cb5-338"><a href="#cb5-338" aria-hidden="true" tabindex="-1"></a>  bayes_rankings <span class="ot">&lt;-</span> <span class="fu">extract_bayesian_receiver_rankings</span>(bayes_model)</span>
+<span id="cb5-339"><a href="#cb5-339" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-340"><a href="#cb5-340" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(bayes_model) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.null</span>(bayes_rankings)) {</span>
+<span id="cb5-341"><a href="#cb5-341" aria-hidden="true" tabindex="-1"></a>    bayes_rankings_full <span class="ot">&lt;-</span> bayes_rankings <span class="sc">|&gt;</span></span>
+<span id="cb5-342"><a href="#cb5-342" aria-hidden="true" tabindex="-1"></a>      <span class="fu">left_join</span>(meta_map, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"nfl_id"</span> <span class="ot">=</span> <span class="st">"targeted_id"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-343"><a href="#cb5-343" aria-hidden="true" tabindex="-1"></a>      <span class="fu">left_join</span>(target_counts, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"nfl_id"</span> <span class="ot">=</span> <span class="st">"targeted_id"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-344"><a href="#cb5-344" aria-hidden="true" tabindex="-1"></a>      <span class="fu">relocate</span>(targeted_name, <span class="at">.before =</span> nfl_id) <span class="sc">|&gt;</span></span>
+<span id="cb5-345"><a href="#cb5-345" aria-hidden="true" tabindex="-1"></a>      <span class="fu">relocate</span>(targeted_position, <span class="at">.after =</span> targeted_name)</span>
+<span id="cb5-346"><a href="#cb5-346" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-347"><a href="#cb5-347" aria-hidden="true" tabindex="-1"></a>    bayes_rankings_qualified <span class="ot">&lt;-</span> bayes_rankings_full <span class="sc">|&gt;</span></span>
+<span id="cb5-348"><a href="#cb5-348" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(n_targets <span class="sc">&gt;=</span> <span class="dv">30</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-349"><a href="#cb5-349" aria-hidden="true" tabindex="-1"></a>      <span class="fu">arrange</span>(<span class="fu">desc</span>(iasa_over_expected_mean))</span>
+<span id="cb5-350"><a href="#cb5-350" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-351"><a href="#cb5-351" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Bayesian mixed-effects model for IASA fit successfully."</span>)</span>
+<span id="cb5-352"><a href="#cb5-352" aria-hidden="true" tabindex="-1"></a>    <span class="fu">print</span>(<span class="fu">head</span>(bayes_rankings_qualified, <span class="dv">10</span>))</span>
+<span id="cb5-353"><a href="#cb5-353" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-354"><a href="#cb5-354" aria-hidden="true" tabindex="-1"></a>    <span class="fu">saveRDS</span>(bayes_model, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"mixed_effects_model_bayes.rds"</span>))</span>
+<span id="cb5-355"><a href="#cb5-355" aria-hidden="true" tabindex="-1"></a>    <span class="fu">write_csv</span>(bayes_rankings_qualified, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"receiver_rankings_bayes.csv"</span>))</span>
+<span id="cb5-356"><a href="#cb5-356" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb5-357"><a href="#cb5-357" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Bayesian IASA model not fit; skipping Bayesian rankings export."</span>)</span>
+<span id="cb5-358"><a href="#cb5-358" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-359"><a href="#cb5-359" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-360"><a href="#cb5-360" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Save outputs</span></span>
+<span id="cb5-361"><a href="#cb5-361" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(mem_model, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"mixed_effects_model.rds"</span>))</span>
+<span id="cb5-362"><a href="#cb5-362" aria-hidden="true" tabindex="-1"></a>  <span class="fu">write_csv</span>(rankings_qualified, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"receiver_rankings.csv"</span>))</span>
+<span id="cb5-363"><a href="#cb5-363" aria-hidden="true" tabindex="-1"></a>  <span class="fu">write_csv</span>(mem_metrics, <span class="fu">file.path</span>(PROC_DIR, <span class="st">"mixed_effects_metrics.csv"</span>))</span>
+<span id="cb5-364"><a href="#cb5-364" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-365"><a href="#cb5-365" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Saved model and rankings to"</span>, PROC_DIR))</span>
+<span id="cb5-366"><a href="#cb5-366" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 </section>
@@ -1850,58 +1869,70 @@ IASA_{\text{play}} = \beta_0
 <span id="cb7-208"><a href="#cb7-208" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-209"><a href="#cb7-209" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(analysis_path)</span>
 <span id="cb7-210"><a href="#cb7-210" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-211"><a href="#cb7-211" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Check for missing IASA values</span></span>
-<span id="cb7-212"><a href="#cb7-212" aria-hidden="true" tabindex="-1"></a>  missing_iasa <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(df<span class="sc">$</span>IASA))</span>
-<span id="cb7-213"><a href="#cb7-213" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (missing_iasa <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
-<span id="cb7-214"><a href="#cb7-214" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="fu">sprintf</span>(<span class="st">"Note: Removing %d rows where IASA could not be calculated (likely due to missing defender tracking data in output)."</span>, missing_iasa))</span>
-<span id="cb7-215"><a href="#cb7-215" aria-hidden="true" tabindex="-1"></a>    df <span class="ot">&lt;-</span> df[<span class="sc">!</span><span class="fu">is.na</span>(df<span class="sc">$</span>IASA), ]</span>
-<span id="cb7-216"><a href="#cb7-216" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-217"><a href="#cb7-217" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-218"><a href="#cb7-218" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Determine output directory</span></span>
-<span id="cb7-219"><a href="#cb7-219" aria-hidden="true" tabindex="-1"></a>  FIG_DIR <span class="ot">&lt;-</span> <span class="fu">get_fig_dir</span>()</span>
-<span id="cb7-220"><a href="#cb7-220" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-221"><a href="#cb7-221" aria-hidden="true" tabindex="-1"></a>  p1 <span class="ot">&lt;-</span> <span class="fu">plot_iasa_distribution</span>(df)</span>
-<span id="cb7-222"><a href="#cb7-222" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"iasa_distribution.png"</span>), p1, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>)</span>
-<span id="cb7-223"><a href="#cb7-223" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-224"><a href="#cb7-224" aria-hidden="true" tabindex="-1"></a>  p2 <span class="ot">&lt;-</span> <span class="fu">plot_iasa_vs_airtime</span>(df)</span>
-<span id="cb7-225"><a href="#cb7-225" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"iasa_vs_airtime.png"</span>), p2, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>)</span>
-<span id="cb7-226"><a href="#cb7-226" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-227"><a href="#cb7-227" aria-hidden="true" tabindex="-1"></a>  p3 <span class="ot">&lt;-</span> <span class="fu">plot_iasa_vs_throw_separation</span>(df)</span>
-<span id="cb7-228"><a href="#cb7-228" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"iasa_vs_dthrow.png"</span>), p3, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>)</span>
+<span id="cb7-211"><a href="#cb7-211" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Optional: align visuals with modeling sample</span></span>
+<span id="cb7-212"><a href="#cb7-212" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Keep only WR/TE targets on forward passes when fields are available</span></span>
+<span id="cb7-213"><a href="#cb7-213" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">all</span>(<span class="fu">c</span>(<span class="st">"pass_length"</span>, <span class="st">"targeted_position"</span>) <span class="sc">%in%</span> <span class="fu">names</span>(df))) {</span>
+<span id="cb7-214"><a href="#cb7-214" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">"Filtering visuals to WR/TE forward-pass targets for consistency with modeling..."</span>)</span>
+<span id="cb7-215"><a href="#cb7-215" aria-hidden="true" tabindex="-1"></a>    df <span class="ot">&lt;-</span> df <span class="sc">|&gt;</span></span>
+<span id="cb7-216"><a href="#cb7-216" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(</span>
+<span id="cb7-217"><a href="#cb7-217" aria-hidden="true" tabindex="-1"></a>        <span class="sc">!</span><span class="fu">is.na</span>(pass_length),</span>
+<span id="cb7-218"><a href="#cb7-218" aria-hidden="true" tabindex="-1"></a>        pass_length <span class="sc">&gt;</span> <span class="dv">0</span>,</span>
+<span id="cb7-219"><a href="#cb7-219" aria-hidden="true" tabindex="-1"></a>        targeted_position <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"WR"</span>, <span class="st">"TE"</span>)</span>
+<span id="cb7-220"><a href="#cb7-220" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb7-221"><a href="#cb7-221" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb7-222"><a href="#cb7-222" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-223"><a href="#cb7-223" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Check for missing IASA values</span></span>
+<span id="cb7-224"><a href="#cb7-224" aria-hidden="true" tabindex="-1"></a>  missing_iasa <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(df<span class="sc">$</span>IASA))</span>
+<span id="cb7-225"><a href="#cb7-225" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (missing_iasa <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb7-226"><a href="#cb7-226" aria-hidden="true" tabindex="-1"></a>    <span class="fu">message</span>(<span class="fu">sprintf</span>(<span class="st">"Note: Removing %d rows where IASA could not be calculated (likely due to missing defender tracking data in output)."</span>, missing_iasa))</span>
+<span id="cb7-227"><a href="#cb7-227" aria-hidden="true" tabindex="-1"></a>    df <span class="ot">&lt;-</span> df[<span class="sc">!</span><span class="fu">is.na</span>(df<span class="sc">$</span>IASA), ]</span>
+<span id="cb7-228"><a href="#cb7-228" aria-hidden="true" tabindex="-1"></a>  }</span>
 <span id="cb7-229"><a href="#cb7-229" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-230"><a href="#cb7-230" aria-hidden="true" tabindex="-1"></a>  <span class="co"># New contextual plots if supplementary data is present</span></span>
-<span id="cb7-231"><a href="#cb7-231" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"route_of_targeted_receiver"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) {</span>
-<span id="cb7-232"><a href="#cb7-232" aria-hidden="true" tabindex="-1"></a>    p4 <span class="ot">&lt;-</span> <span class="fu">plot_iasa_by_route</span>(df)</span>
-<span id="cb7-233"><a href="#cb7-233" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"iasa_by_route.png"</span>), p4, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
-<span id="cb7-234"><a href="#cb7-234" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb7-230"><a href="#cb7-230" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Determine output directory</span></span>
+<span id="cb7-231"><a href="#cb7-231" aria-hidden="true" tabindex="-1"></a>  FIG_DIR <span class="ot">&lt;-</span> <span class="fu">get_fig_dir</span>()</span>
+<span id="cb7-232"><a href="#cb7-232" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-233"><a href="#cb7-233" aria-hidden="true" tabindex="-1"></a>  p1 <span class="ot">&lt;-</span> <span class="fu">plot_iasa_distribution</span>(df)</span>
+<span id="cb7-234"><a href="#cb7-234" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"iasa_distribution.png"</span>), p1, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>)</span>
 <span id="cb7-235"><a href="#cb7-235" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-236"><a href="#cb7-236" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"team_coverage_man_zone"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) {</span>
-<span id="cb7-237"><a href="#cb7-237" aria-hidden="true" tabindex="-1"></a>    p5 <span class="ot">&lt;-</span> <span class="fu">plot_iasa_by_coverage</span>(df)</span>
-<span id="cb7-238"><a href="#cb7-238" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"iasa_by_coverage.png"</span>), p5, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
-<span id="cb7-239"><a href="#cb7-239" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-240"><a href="#cb7-240" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-241"><a href="#cb7-241" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bayesian IASA over expected intervals (if available)</span></span>
-<span id="cb7-242"><a href="#cb7-242" aria-hidden="true" tabindex="-1"></a>  bayes_iasa_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(PROC_DIR, <span class="st">"receiver_rankings_bayes.csv"</span>)</span>
-<span id="cb7-243"><a href="#cb7-243" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">file.exists</span>(bayes_iasa_path)) {</span>
-<span id="cb7-244"><a href="#cb7-244" aria-hidden="true" tabindex="-1"></a>    rankings_bayes <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(bayes_iasa_path, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb7-245"><a href="#cb7-245" aria-hidden="true" tabindex="-1"></a>    p6 <span class="ot">&lt;-</span> <span class="fu">plot_bayesian_iasa_intervals</span>(rankings_bayes, <span class="at">top_n =</span> <span class="dv">15</span>)</span>
-<span id="cb7-246"><a href="#cb7-246" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(p6)) {</span>
-<span id="cb7-247"><a href="#cb7-247" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"receiver_iasa_bayes_intervals.png"</span>), p6, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
-<span id="cb7-248"><a href="#cb7-248" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb7-249"><a href="#cb7-249" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-250"><a href="#cb7-250" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-251"><a href="#cb7-251" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bayesian Markov Lift intervals (if available)</span></span>
-<span id="cb7-252"><a href="#cb7-252" aria-hidden="true" tabindex="-1"></a>  bayes_markov_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(PROC_DIR, <span class="st">"markov_lift_rankings_bayes.csv"</span>)</span>
-<span id="cb7-253"><a href="#cb7-253" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">file.exists</span>(bayes_markov_path)) {</span>
-<span id="cb7-254"><a href="#cb7-254" aria-hidden="true" tabindex="-1"></a>    lift_bayes <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(bayes_markov_path, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb7-255"><a href="#cb7-255" aria-hidden="true" tabindex="-1"></a>    p7 <span class="ot">&lt;-</span> <span class="fu">plot_bayesian_markov_intervals</span>(lift_bayes, <span class="at">top_n =</span> <span class="dv">15</span>)</span>
-<span id="cb7-256"><a href="#cb7-256" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(p7)) {</span>
-<span id="cb7-257"><a href="#cb7-257" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"markov_lift_bayes_intervals.png"</span>), p7, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
-<span id="cb7-258"><a href="#cb7-258" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb7-259"><a href="#cb7-259" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-260"><a href="#cb7-260" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-261"><a href="#cb7-261" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Saved figures to"</span>, FIG_DIR))</span>
-<span id="cb7-262"><a href="#cb7-262" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb7-236"><a href="#cb7-236" aria-hidden="true" tabindex="-1"></a>  p2 <span class="ot">&lt;-</span> <span class="fu">plot_iasa_vs_airtime</span>(df)</span>
+<span id="cb7-237"><a href="#cb7-237" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"iasa_vs_airtime.png"</span>), p2, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>)</span>
+<span id="cb7-238"><a href="#cb7-238" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-239"><a href="#cb7-239" aria-hidden="true" tabindex="-1"></a>  p3 <span class="ot">&lt;-</span> <span class="fu">plot_iasa_vs_throw_separation</span>(df)</span>
+<span id="cb7-240"><a href="#cb7-240" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"iasa_vs_dthrow.png"</span>), p3, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>)</span>
+<span id="cb7-241"><a href="#cb7-241" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-242"><a href="#cb7-242" aria-hidden="true" tabindex="-1"></a>  <span class="co"># New contextual plots if supplementary data is present</span></span>
+<span id="cb7-243"><a href="#cb7-243" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"route_of_targeted_receiver"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) {</span>
+<span id="cb7-244"><a href="#cb7-244" aria-hidden="true" tabindex="-1"></a>    p4 <span class="ot">&lt;-</span> <span class="fu">plot_iasa_by_route</span>(df)</span>
+<span id="cb7-245"><a href="#cb7-245" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"iasa_by_route.png"</span>), p4, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
+<span id="cb7-246"><a href="#cb7-246" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb7-247"><a href="#cb7-247" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-248"><a href="#cb7-248" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">"team_coverage_man_zone"</span> <span class="sc">%in%</span> <span class="fu">names</span>(df)) {</span>
+<span id="cb7-249"><a href="#cb7-249" aria-hidden="true" tabindex="-1"></a>    p5 <span class="ot">&lt;-</span> <span class="fu">plot_iasa_by_coverage</span>(df)</span>
+<span id="cb7-250"><a href="#cb7-250" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"iasa_by_coverage.png"</span>), p5, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
+<span id="cb7-251"><a href="#cb7-251" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb7-252"><a href="#cb7-252" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-253"><a href="#cb7-253" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bayesian IASA over expected intervals (if available)</span></span>
+<span id="cb7-254"><a href="#cb7-254" aria-hidden="true" tabindex="-1"></a>  bayes_iasa_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(PROC_DIR, <span class="st">"receiver_rankings_bayes.csv"</span>)</span>
+<span id="cb7-255"><a href="#cb7-255" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">file.exists</span>(bayes_iasa_path)) {</span>
+<span id="cb7-256"><a href="#cb7-256" aria-hidden="true" tabindex="-1"></a>    rankings_bayes <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(bayes_iasa_path, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb7-257"><a href="#cb7-257" aria-hidden="true" tabindex="-1"></a>    p6 <span class="ot">&lt;-</span> <span class="fu">plot_bayesian_iasa_intervals</span>(rankings_bayes, <span class="at">top_n =</span> <span class="dv">15</span>)</span>
+<span id="cb7-258"><a href="#cb7-258" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(p6)) {</span>
+<span id="cb7-259"><a href="#cb7-259" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"receiver_iasa_bayes_intervals.png"</span>), p6, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
+<span id="cb7-260"><a href="#cb7-260" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-261"><a href="#cb7-261" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb7-262"><a href="#cb7-262" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-263"><a href="#cb7-263" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bayesian Markov Lift intervals (if available)</span></span>
+<span id="cb7-264"><a href="#cb7-264" aria-hidden="true" tabindex="-1"></a>  bayes_markov_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(PROC_DIR, <span class="st">"markov_lift_rankings_bayes.csv"</span>)</span>
+<span id="cb7-265"><a href="#cb7-265" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">file.exists</span>(bayes_markov_path)) {</span>
+<span id="cb7-266"><a href="#cb7-266" aria-hidden="true" tabindex="-1"></a>    lift_bayes <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(bayes_markov_path, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb7-267"><a href="#cb7-267" aria-hidden="true" tabindex="-1"></a>    p7 <span class="ot">&lt;-</span> <span class="fu">plot_bayesian_markov_intervals</span>(lift_bayes, <span class="at">top_n =</span> <span class="dv">15</span>)</span>
+<span id="cb7-268"><a href="#cb7-268" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(p7)) {</span>
+<span id="cb7-269"><a href="#cb7-269" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ggsave</span>(<span class="fu">file.path</span>(FIG_DIR, <span class="st">"markov_lift_bayes_intervals.png"</span>), p7, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
+<span id="cb7-270"><a href="#cb7-270" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-271"><a href="#cb7-271" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb7-272"><a href="#cb7-272" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-273"><a href="#cb7-273" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="fu">paste</span>(<span class="st">"Saved figures to"</span>, FIG_DIR))</span>
+<span id="cb7-274"><a href="#cb7-274" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 </section>
@@ -1946,15 +1977,19 @@ IASA_{\text{play}} = \beta_0
 <span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>get_fig_dir <span class="ot">&lt;-</span> <span class="cf">function</span>() {</span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">dir.exists</span>(<span class="st">"figures"</span>)) {</span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>        <span class="fu">return</span>(<span class="st">"figures"</span>)</span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">dir.exists</span>(<span class="st">"../figures"</span>)) {</span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>        <span class="fu">return</span>(<span class="st">"../figures"</span>)</span>
-<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">dir.create</span>(<span class="st">"figures"</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="st">"figures"</span></span>
-<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Prefer the project‑root figures directory if it exists,</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># so we don't accidentally create multiple figures folders.</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">dir.exists</span>(<span class="st">"../figures"</span>)) {</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>        <span class="fu">return</span>(<span class="st">"../figures"</span>)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">dir.exists</span>(<span class="st">"figures"</span>)) {</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>        <span class="fu">return</span>(<span class="st">"figures"</span>)</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    <span class="co"># If neither exists, create a figures directory in the current</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># working directory (e.g., project root) as a fallback.</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">dir.create</span>(<span class="st">"figures"</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>    <span class="st">"figures"</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>The scripts in <code>src/</code> write processed <code>.rds</code> and <code>.csv</code> files to <code>processed/</code>, which are in turn read by this Quarto document to generate tables and figures.</p>
