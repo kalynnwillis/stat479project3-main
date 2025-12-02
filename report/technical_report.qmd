@@ -886,7 +886,6 @@ fit_bayesian_BFD_model <- function(data) {
     return(NULL)
   }
 
-  message("Fitting Bayesian Mixed-Effects Model for IASA (via brms)...")
 
   bayes_fit <- brms::brm(
     BFD ~ air_time + d_throw + pass_length + defenders_in_the_box +
