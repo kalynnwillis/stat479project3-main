@@ -73,13 +73,11 @@ To address our research questions, we use the Big Data Bowl 2026 tracking and pl
 # Exact code used to ingest weekly input/output CSVs from the Big Data Bowl.
 
 # 00_load_data.R
-# Description: Load and preprocess input and output tracking data.
+
 
 library(tidyverse)
 library(readr)
 
-# --- Constants ---
-# Determine DATA_DIR based on where the script is run from
 if (dir.exists("data")) {
   DATA_DIR <- "data"
 } else if (dir.exists("../data")) {
@@ -90,8 +88,6 @@ if (dir.exists("data")) {
 }
 
 WEEKS <- sprintf("w%02d", 1:18) # Weeks w01 to w18
-
-# --- Functions ---
 
 load_week_data <- function(week) {
   input_file <- file.path(DATA_DIR, paste0("input_2023_", week, ".csv"))
@@ -105,8 +101,6 @@ load_week_data <- function(week) {
     warning(paste("Output file not found:", output_file))
     return(NULL)
   }
-
-  message(paste("Loading data for", week, "..."))
   input_data <- read_csv(input_file, show_col_types = FALSE)
   output_data <- read_csv(output_file, show_col_types = FALSE)
 
@@ -114,8 +108,6 @@ load_week_data <- function(week) {
 }
 
 load_tracking_data <- function(weeks = WEEKS) {
-  # Loads data for multiple weeks and combines them (optional)
-  # For now, returning a list keyed by week
 
   all_data <- list()
 
@@ -129,17 +121,12 @@ load_tracking_data <- function(weeks = WEEKS) {
   return(all_data)
 }
 
-# --- Main Execution ---
-
 if (sys.nframe() == 0) {
-  # Check if data directory has files
   if (length(list.files(DATA_DIR, pattern = "\\.csv$")) == 0) {
     stop("No CSV files found in data/ directory. Please download the Big Data Bowl data.")
   }
 
   data <- load_tracking_data()
-  message("Data loading complete.")
-  # saveRDS(data, file.path(DATA_DIR, "loaded_data.rds"))
 }
 ```
 
@@ -154,14 +141,8 @@ Our filtered dataset contains 14,108 passing plays, which each contain the recei
 # Exact feature-engineering code used to construct play-level separation and trajectories.
 
 # 01_engineer_features.R
-# Description: Feature engineering for receiver movement analysis.
-# Input: Raw tracking data (from 00_load_data.R)
-# Output: Play-level features including separation at throw/catch.
 
 library(tidyverse)
-
-# --- Helpers ---
-
 identify_targeted_receiver <- function(play_data) {
   tr <- play_data |>
     filter(player_role == "Targeted Receiver") |>
@@ -202,11 +183,9 @@ compute_play_separation <- function(gid, pid, input_df, output_df) {
     return(NULL)
   }
 
-  # --- Throw frame (input data: up to throw) ---
   throw_frame <- max(play_in$frame_id, na.rm = TRUE)
   rec_throw <- play_in |> filter(nfl_id == tr_id, frame_id == throw_frame)
 
-  # Targeted receiver name (from input CSV)
   tr_name_vec <- play_in |>
     filter(nfl_id == tr_id) |>
     distinct(player_name) |>
@@ -214,15 +193,12 @@ compute_play_separation <- function(gid, pid, input_df, output_df) {
 
   tr_name <- if (length(tr_name_vec) > 0) tr_name_vec[1] else NA_character_
 
-  # Targeted receiver position (from input CSV; e.g., WR/TE/RB/FB)
   tr_pos_vec <- play_in |>
     filter(nfl_id == tr_id) |>
     distinct(player_position) |>
     pull(player_position)
 
   tr_pos <- if (length(tr_pos_vec) > 0) tr_pos_vec[1] else NA_character_
-
-  # Identify Defenders
   defs_throw <- play_in |>
     filter(player_role == "Defensive coverage", frame_id == throw_frame)
 
@@ -239,7 +215,7 @@ compute_play_separation <- function(gid, pid, input_df, output_df) {
 
   d_throw <- calculate_separation(rec_throw, defs_throw)
 
-  # --- In-air frames (output data: from throw to ball arrival) ---
+  #In-air frames
   rec_out <- play_out |> filter(nfl_id == tr_id)
   if (nrow(rec_out) == 0) {
     return(NULL)
@@ -254,13 +230,10 @@ compute_play_separation <- function(gid, pid, input_df, output_df) {
 
   d_catch <- calculate_separation(rec_catch, defs_catch)
 
-  # Assume 10 Hz frame rate; air_time is time between first in-air frame
-  # in the output and the catch frame.
+  # Assume 10 Hz frame rate
   air_time <- (catch_frame - first_out_frame) * 0.1
 
-  # --- NEW: Compute Separation Trajectory ---
-  # We compute separation for EVERY frame in the output for this receiver
-  # Using simple map instead of group_modify to avoid grouping issues
+  #Compute Separation Trajectory
 
   frames <- unique(rec_out$frame_id)
 
@@ -303,8 +276,6 @@ build_play_feature_table <- function(week_data) {
 
   plays <- input_df |> distinct(game_id, play_id)
 
-  message(paste("Processing", nrow(plays), "plays..."))
-
   all_features <- list()
   all_trajectories <- list()
 
@@ -330,10 +301,7 @@ build_play_feature_table <- function(week_data) {
   )
 }
 
-# --- Main Execution (if run as script) ---
-
 if (sys.nframe() == 0) {
-  # Source helpers and loader from the same directory
   if (file.exists("src/utils_paths.R")) {
     source("src/utils_paths.R")
   } else if (file.exists("utils_paths.R")) {
@@ -352,29 +320,22 @@ if (sys.nframe() == 0) {
 
   OUT_DIR <- get_proc_dir()
 
-  message(paste("Processing weeks:", paste(WEEKS, collapse = ", ")))
-
   for (week in WEEKS) {
-    message(paste("--- Starting", week, "---"))
     week_data_list <- load_week_data(week)
 
     if (is.null(week_data_list)) {
-      message(paste("Skipping", week, "- data not found."))
       next
     }
 
-    message(paste("Building play-level feature table for", week, "..."))
     results <- build_play_feature_table(week_data_list)
 
-    # Save Features
+    #save Features
     feat_file <- file.path(OUT_DIR, paste0("play_features_", week, ".rds"))
     saveRDS(results$features, feat_file)
 
-    # Save Trajectories (New!)
+    #save Trajectories
     traj_file <- file.path(OUT_DIR, paste0("separation_trajectories_", week, ".rds"))
     saveRDS(results$trajectories, traj_file)
-
-    message(paste("Saved", feat_file, "and", traj_file))
 
     rm(week_data_list, results)
     gc()
@@ -384,9 +345,9 @@ if (sys.nframe() == 0) {
 
 ## Methodology
 
-### In‑Air Separation Added (BFD)
+### Ball Flight Differential (BFD)
 
-The play-level metric we have created is an Ball-Flight Separation added (BFD) model:
+The play-level metric we have created is an Ball-Flight Differential added (BFD) model:
 $$
 BFD = d_{catch} - d_{throw},
 $$
@@ -399,7 +360,6 @@ This measures the difference in distance (in yards) between the targeted receive
 # Exact code used to compute BFD and join supplementary context.
 
 # 02_compute_BFD.R
-# Description: Compute Ball-Flight Differential added (BFD).
 # Formula: BFD = d_catch - d_throw
 # Interpretation:
 #   Positive BFD -> Gained separation (Good for WR)
@@ -411,14 +371,12 @@ compute_BFD <- function(play_features) {
   play_features |>
     mutate(
       BFD = d_catch - d_throw,
-      # Additional derived metrics
       separation_change_pct = ifelse(d_throw > 0, (d_catch - d_throw) / d_throw, NA_real_),
       is_separation_gained = BFD > 0
     )
 }
 
 if (sys.nframe() == 0) {
-  # Source path helpers
   if (file.exists("src/utils_paths.R")) {
     source("src/utils_paths.R")
   } else if (file.exists("utils_paths.R")) {
@@ -427,27 +385,16 @@ if (sys.nframe() == 0) {
     stop("Could not find 'utils_paths.R'.")
   }
 
-  # Determine input/output directory
   PROC_DIR <- get_proc_dir()
 
-  # Find all feature files
   feature_files <- list.files(PROC_DIR, pattern = "play_features_w[0-9]+\\.rds", full.names = TRUE)
 
   if (length(feature_files) == 0) {
     stop(paste("No feature files found in", PROC_DIR, ". Run 01_engineer_features.R first."))
   }
 
-  message(paste("Found", length(feature_files), "feature files. Loading and combining..."))
-
   features <- purrr::map_dfr(feature_files, readRDS)
-
-  message(paste("Total plays loaded:", nrow(features)))
-
-  message("Computing BFD and derived metrics...")
   analysis_df <- compute_BFD(features)
-
-  # --- Optional: Join supplementary play-level data, if available ---
-  # This adds route / coverage / EPA context from BDB2026_supplementary_data.csv
   SUPP_PATH <- NULL
   if (dir.exists("data")) {
     SUPP_PATH <- file.path("data", "BDB2026_supplementary_data.csv")
@@ -456,7 +403,7 @@ if (sys.nframe() == 0) {
   }
 
   if (!is.null(SUPP_PATH) && file.exists(SUPP_PATH)) {
-    message("Joining supplementary play-level data...")
+
 
     supp <- readr::read_csv(SUPP_PATH, show_col_types = FALSE) |>
       dplyr::select(
@@ -482,7 +429,6 @@ if (sys.nframe() == 0) {
         yards_gained
       )
 
-    # Ensure join keys have compatible types
     analysis_df <- analysis_df |>
       mutate(
         game_id = as.numeric(game_id),
@@ -500,7 +446,6 @@ if (sys.nframe() == 0) {
     message("Supplementary play-level data not found; proceeding without it.")
   }
 
-  # Basic summary
   summary_stats <- analysis_df |>
     summarise(
       avg_BFD = mean(BFD, na.rm = TRUE),
@@ -512,7 +457,6 @@ if (sys.nframe() == 0) {
   print(summary_stats)
 
   saveRDS(analysis_df, file.path(PROC_DIR, "analysis_full.rds"))
-  message(paste("Saved analysis_full.rds to", PROC_DIR))
 }
 ```
 
@@ -551,12 +495,9 @@ This percentage measures if an individual receiver breaks open from often than t
 # Exact code used to build Markov transitions and Markov Lift.
 
 # 06_markov_separation.R
-# Description: Analyze separation trajectories using Markov Chains.
-# Goal: Compute transition probabilities between separation states and "Markov Lift".
 
 library(tidyverse)
 
-# --- Constants ---
 # Define separation states (in yards)
 # S0: < 1 yard (Tight)
 # S1: 1-3 yards (Moderate)
@@ -572,23 +513,17 @@ get_state <- function(sep) {
   )
 }
 
-# Order of states for matrix
 STATE_LEVELS <- c("S0_Tight", "S1_Moderate", "S2_Open", "S3_WideOpen")
-
-# --- Functions ---
 
 load_trajectories <- function(proc_dir = "processed") {
   files <- list.files(proc_dir, pattern = "separation_trajectories_w[0-9]+\\.rds", full.names = TRUE)
   if (length(files) == 0) stop("No trajectory files found.")
-
-  message(paste("Loading", length(files), "trajectory files..."))
 
   map(files, readRDS) |>
     dplyr::bind_rows()
 }
 
 compute_transitions <- function(traj_df) {
-  # Compute state t -> state t+1 for each play
   traj_df |>
     arrange(game_id, play_id, frame_id) |>
     group_by(game_id, play_id) |>
@@ -596,24 +531,20 @@ compute_transitions <- function(traj_df) {
       state = get_state(separation),
       next_state = lead(state)
     ) |>
-    # Drop any transitions where either side is NA
     filter(!is.na(state), !is.na(next_state)) |>
     ungroup()
 }
 
 estimate_transition_matrix <- function(transitions) {
-  # Enforce consistent state ordering and keep zero-count combos
   transitions <- transitions |>
     mutate(
       state = factor(state, levels = STATE_LEVELS),
       next_state = factor(next_state, levels = STATE_LEVELS)
     )
 
-  # Count transitions (including zero cells)
   counts <- transitions |>
     count(state, next_state, .drop = FALSE)
 
-  # Convert to probabilities by row (current state)
   counts |>
     group_by(state) |>
     mutate(prob = ifelse(sum(n) > 0, n / sum(n), 0)) |>
@@ -636,23 +567,9 @@ plot_transition_matrix <- function(trans_probs) {
 }
 
 compute_markov_lift <- function(transitions, features_df) {
-  # Calculate how often a specific receiver improves their state vs league average
-  # Improvement: Moving to a 'better' state index, or maintaining a good state?
-  # Let's define "Positive Outcome" as ending in Open/WideOpen (S2/S3)
 
-  # Actually, simpler metric:
-  # For each transition observed for a player (Start -> End),
-  # What was the PROBABILITY the league would have made that transition?
-  # Or: Difference between Player's transition matrix and League matrix?
-
-  # Metric: "Openness Lift"
-  # P(End in S2/S3 | Start in S0/S1) for Player vs League
-
-  # Filter for starts in Tight/Moderate
   relevant_starts <- c("S0_Tight", "S1_Moderate")
   good_ends <- c("S2_Open", "S3_WideOpen")
-
-  # League Baseline
   league_rate <- transitions |>
     filter(state %in% relevant_starts) |>
     summarise(
@@ -660,7 +577,6 @@ compute_markov_lift <- function(transitions, features_df) {
     ) |>
     pull(success_rate)
 
-  message("League Baseline Success Rate (S0/S1 -> S2/S3): ", round(league_rate, 4))
 
   player_stats <- transitions |>
     inner_join(features_df, by = c("game_id", "play_id")) |>
@@ -681,7 +597,6 @@ compute_markov_lift <- function(transitions, features_df) {
 }
 
 compute_break_counts <- function(transitions, features_df, min_transitions = 50) {
-  # Helper to compute per-receiver transition counts and successes for S0/S1 -> S2/S3
   relevant_starts <- c("S0_Tight", "S1_Moderate")
   good_ends <- c("S2_Open", "S3_WideOpen")
 
@@ -710,13 +625,10 @@ compute_break_counts <- function(transitions, features_df, min_transitions = 50)
 }
 
 fit_bayesian_markov_model <- function(break_df) {
-  # Fit a hierarchical Bayesian model for break-open rates
   if (!requireNamespace("brms", quietly = TRUE)) {
     warning("Package 'brms' not installed; skipping Bayesian Markov Lift model.")
     return(NULL)
   }
-
-  message("Fitting Bayesian Markov model for break-open rates (via brms)...")
 
   break_df <- break_df |>
     mutate(targeted_id = as.factor(targeted_id))
@@ -741,20 +653,16 @@ fit_bayesian_markov_model <- function(break_df) {
 }
 
 extract_bayesian_markov_lift <- function(bayes_model, break_df, league_rate) {
-  # Extract posterior summaries for per-receiver break-open probabilities and lift
   if (is.null(bayes_model) || nrow(break_df) == 0) {
     return(NULL)
   }
 
-  # Posterior expected probabilities for each row in break_df
-  # posterior_epred returns draws on the probability scale for binomial models
   post_prob <- brms::posterior_epred(
     bayes_model,
     newdata = break_df,
     re_formula = ~ (1 | targeted_id)
   )
 
-  # post_prob: iterations x n_players
   summaries <- t(apply(post_prob, 2, function(draws) {
     c(
       player_rate_mean  = mean(draws),
@@ -778,8 +686,6 @@ extract_bayesian_markov_lift <- function(bayes_model, break_df, league_rate) {
     arrange(desc(markov_lift_mean))
 }
 
-# --- Main Execution ---
-
 if (sys.nframe() == 0) {
   # Source path helpers
   if (file.exists("src/utils_paths.R")) {
@@ -792,22 +698,16 @@ if (sys.nframe() == 0) {
 
   PROC_DIR <- get_proc_dir()
 
-  message("Loading trajectories...")
   traj <- load_trajectories(PROC_DIR)
 
-  message("Computing Markov Lift for players (and league transition matrix)...")
   raw_features <- readRDS(file.path(PROC_DIR, "analysis_full.rds"))
 
-  # Apply the same football filters used for BFD modeling where possible:
-  #   - Forward passes only (pass_length > 0)
-  #   - Route-running positions only (WR / TE)
   if (!all(c("pass_length", "targeted_position") %in% names(raw_features))) {
     warning("pass_length or targeted_position missing in analysis_full.rds; using all plays for Markov transitions and Lift.")
 
     features_df <- raw_features |>
       select(game_id, play_id, targeted_id)
 
-    # Transitions from all targeted plays
     trans <- compute_transitions(traj)
   } else {
     features_df <- raw_features |>
@@ -818,7 +718,6 @@ if (sys.nframe() == 0) {
       ) |>
       select(game_id, play_id, targeted_id, targeted_position, pass_length)
 
-    # Restrict trajectories / transitions to the same WR/TE forward-pass plays
     valid_plays <- features_df |>
       distinct(game_id, play_id)
 
@@ -826,18 +725,15 @@ if (sys.nframe() == 0) {
       inner_join(valid_plays, by = c("game_id", "play_id"))
   }
 
-  message("Estimating league transition matrix...")
   tm <- estimate_transition_matrix(trans)
   print(tm)
 
-  # Save plot
   p <- plot_transition_matrix(tm)
   FIG_DIR <- get_fig_dir()
   ggsave(file.path(FIG_DIR, "markov_transitions.png"), p, width = 8, height = 6)
 
   lift <- compute_markov_lift(trans, features_df)
 
-  # Optionally add names if targeted_name is available in analysis data
   df_names <- raw_features
   if ("targeted_name" %in% names(df_names)) {
     name_map <- df_names |>
@@ -853,10 +749,7 @@ if (sys.nframe() == 0) {
   print(head(lift, 10))
 
   write_csv(lift, file.path(PROC_DIR, "markov_lift_rankings.csv"))
-  message("Saved markov_lift_rankings.csv")
 
-  # --- Bayesian Markov Lift (if brms is available) ---
-  message("Fitting Bayesian Markov Lift model (if brms is installed)...")
   break_info <- compute_break_counts(trans, features_df, min_transitions = 50)
   bayes_markov <- fit_bayesian_markov_model(break_info$break_df)
   bayes_lift <- extract_bayesian_markov_lift(bayes_markov, break_info$break_df, break_info$league_rate)
@@ -873,7 +766,6 @@ if (sys.nframe() == 0) {
         relocate(targeted_name, .before = targeted_id)
     }
 
-    message("Bayesian Markov Lift model fit successfully.")
     print(head(bayes_lift, 10))
 
     saveRDS(bayes_markov, file.path(PROC_DIR, "markov_lift_bayes_model.rds"))
@@ -957,14 +849,10 @@ Model diagnostics (fitted vs. observed BFD and residual distributions) are used 
 # Exact code used for mixed-effects and Bayesian BFD over expected models.
 
 # 03_models.R
-# Description: Statistical and ML modeling of BFD.
-# Goal: Isolate receiver ability (random intercept) controlling for context.
 
 library(tidyverse)
 library(lme4)
-library(broom.mixed) # For tidy model outputs
-
-# --- Functions ---
+library(broom.mixed) 
 
 fit_mixed_effects_model <- function(data) {
   # Model BFD controlling for:
@@ -973,8 +861,6 @@ fit_mixed_effects_model <- function(data) {
   # - Route / coverage context and defensive structure
   # - Random Effect: Receiver ID (The metric we want)
   # - Random Effect: Game ID (Game-specific conditions/weather)
-
-  message("Fitting Mixed-Effects Model: BFD ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +\n  team_coverage_man_zone + route_of_targeted_receiver + targeted_position + (1|targeted_id) + (1|game_id)...")
 
   m <- lmer(
     BFD ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +
@@ -987,7 +873,6 @@ fit_mixed_effects_model <- function(data) {
 }
 
 extract_receiver_rankings <- function(model) {
-  # Extract random intercepts for receivers (targeted_id)
   ranefs <- ranef(model)$targeted_id
 
   ranefs |>
@@ -997,13 +882,10 @@ extract_receiver_rankings <- function(model) {
 }
 
 fit_bayesian_BFD_model <- function(data) {
-  # Fit a Bayesian analogue of the mixed-effects model (partial pooling over receivers/games)
   if (!requireNamespace("brms", quietly = TRUE)) {
     warning("Package 'brms' not installed; skipping Bayesian BFD model.")
     return(NULL)
   }
-
-  message("Fitting Bayesian Mixed-Effects Model for BFD (via brms)...")
 
   bayes_fit <- brms::brm(
     BFD ~ air_time + d_throw + pass_length + defenders_in_the_box +
@@ -1029,16 +911,9 @@ fit_bayesian_BFD_model <- function(data) {
 }
 
 extract_bayesian_receiver_rankings <- function(bayes_model) {
-  # Extract posterior mean and 95% CrI for receiver random intercepts (BFD over expected)
-  # NOTE: This helper is intentionally conservative; if the structure of the
-  # brms object is not as expected, it returns NULL and the pipeline falls
-  # back to frequentist rankings only.
   if (is.null(bayes_model)) {
     return(NULL)
   }
-
-  # Use posterior draws for random effects; this is more robust to version
-  # differences than relying on summary dimnames.
   if (!requireNamespace("posterior", quietly = TRUE)) {
     warning("Package 'posterior' not available; skipping Bayesian receiver rankings.")
     return(NULL)
@@ -1046,7 +921,6 @@ extract_bayesian_receiver_rankings <- function(bayes_model) {
 
   draws <- brms::as_draws_df(bayes_model)
 
-  # Levels of the targeted receiver random effect in the model data
   if (!"targeted_id" %in% names(bayes_model$data)) {
     warning("Model data does not contain 'targeted_id'; skipping Bayesian receiver rankings.")
     return(NULL)
@@ -1091,8 +965,6 @@ extract_bayesian_receiver_rankings <- function(bayes_model) {
     arrange(desc(BFD_over_expected_mean))
 }
 
-# --- Main Execution ---
-
 if (sys.nframe() == 0) {
   # Source path helpers
   if (file.exists("src/utils_paths.R")) {
@@ -1103,13 +975,10 @@ if (sys.nframe() == 0) {
     stop("Could not find 'utils_paths.R'.")
   }
 
-  # Determine input/output directory
   PROC_DIR <- get_proc_dir()
 
-  # Load FULL dataset
   analysis_path <- file.path(PROC_DIR, "analysis_full.rds")
   if (!file.exists(analysis_path)) {
-    # Fallback to W1 if full not ready
     if (file.exists(file.path(PROC_DIR, "analysis_w01.rds"))) {
       warning("analysis_full.rds not found. Using Week 1 data.")
       analysis_path <- file.path(PROC_DIR, "analysis_w01.rds")
@@ -1120,13 +989,11 @@ if (sys.nframe() == 0) {
 
   df <- readRDS(analysis_path)
 
-  # Ensure supplementary categorical variables exist and are usable (no NAs, factors)
   if (!"offense_formation" %in% names(df)) df$offense_formation <- NA_character_
   if (!"receiver_alignment" %in% names(df)) df$receiver_alignment <- NA_character_
   if (!"route_of_targeted_receiver" %in% names(df)) df$route_of_targeted_receiver <- NA_character_
   if (!"team_coverage_man_zone" %in% names(df)) df$team_coverage_man_zone <- NA_character_
   if (!"team_coverage_type" %in% names(df)) df$team_coverage_type <- NA_character_
-  # Ensure pass / position fields exist (needed for football-correct filtering)
   if (!"pass_length" %in% names(df)) df$pass_length <- NA_real_
   if (!"pass_result" %in% names(df)) df$pass_result <- NA_character_
   if (!"targeted_position" %in% names(df)) df$targeted_position <- NA_character_
@@ -1141,21 +1008,12 @@ if (sys.nframe() == 0) {
       targeted_position = replace_na(targeted_position, "Unknown")
     )
 
-  # --- Football-correct filtering (plays kept for modeling) ---
-  # 1) Forward passes only (screens / pitches dropped via pass_length > 0)
-  # 2) Route-running positions only (WR / TE)
-
   df_filtered <- df |>
     filter(
       !is.na(pass_length),
       pass_length > 0,
       targeted_position %in% c("WR", "TE")
     )
-
-  message(paste("Total rows loaded:", nrow(df)))
-  message(paste("Rows after football filters (forward passes, WR/TE):", nrow(df_filtered)))
-
-  # --- Debugging Missing Values (post-filter) ---
 
   missing_stats <- df_filtered |>
     summarise(
@@ -1167,12 +1025,8 @@ if (sys.nframe() == 0) {
       zero_air_time = sum(air_time == 0, na.rm = TRUE),
       negative_air_time = sum(air_time < 0, na.rm = TRUE)
     )
-
-  print("Missing Value Counts:")
   print(missing_stats)
 
-  # Filter for valid data
-  # IMPORTANT: Ensure targeted_id is a factor for random effects
   df_model <- df_filtered |>
     drop_na(BFD, air_time, d_throw, targeted_id, pass_length, defenders_in_the_box) |>
     filter(air_time >= 0) |> # Allow 0 air time? No, but >= just in case floating point issues
@@ -1186,23 +1040,16 @@ if (sys.nframe() == 0) {
       defenders_in_the_box_scaled = scale(defenders_in_the_box)[, 1]
     )
 
-  message(paste("Fitting model on", nrow(df_model), "plays."))
-
-  # NOTE: If the dataset is small (e.g., only Week 1 valid plays),
-  # random effects might be estimated as zero (singular fit).
-  # This is expected with sparse data.
-
-  # Fit Model
+  #Fit Model
   mem_model <- fit_mixed_effects_model(df_model)
 
   if (lme4::isSingular(mem_model)) {
     message("Warning: mixed-effects model fit is singular.")
   }
 
-  # Print Summary
   print(summary(mem_model))
 
-  # --- Model validation metrics (in-sample) ---
+  #Model validation metrics
   y_obs <- df_model$BFD
   y_hat <- fitted(mem_model)
   resid <- y_obs - y_hat
@@ -1215,18 +1062,14 @@ if (sys.nframe() == 0) {
     metric = c("RMSE", "MAE", "Pseudo_R2"),
     value  = c(rmse, mae, r2)
   )
-
-  message("Mixed-effects model metrics:")
   print(mem_metrics)
 
-  # --- Diagnostic figures ---
   diag_df <- tibble(
     BFD = y_obs,
     fitted = y_hat,
     resid = resid
   )
 
-  # Determine figure directory
   FIG_DIR <- get_fig_dir()
 
   p_fit <- ggplot(diag_df, aes(x = fitted, y = BFD)) +
@@ -1260,10 +1103,8 @@ if (sys.nframe() == 0) {
     width = 8, height = 5, dpi = 300
   )
 
-  # Extract and Save Rankings
   rankings <- extract_receiver_rankings(mem_model)
 
-  # Target counts (forward-pass targets per receiver used in modeling)
   target_counts <- df_model |>
     group_by(targeted_id) |>
     summarise(
@@ -1272,7 +1113,6 @@ if (sys.nframe() == 0) {
     ) |>
     mutate(targeted_id = as.character(targeted_id))
 
-  # Join with player names / positions from the (filtered) analysis data if available
   meta_map <- df_filtered |>
     distinct(targeted_id, targeted_name, targeted_position) |>
     mutate(targeted_id = as.character(targeted_id))
@@ -1289,7 +1129,6 @@ if (sys.nframe() == 0) {
 
   print(head(rankings_qualified, 10))
 
-  # Fit Bayesian version of the mixed-effects model (if brms is available)
   bayes_model <- fit_bayesian_BFD_model(df_model)
   bayes_rankings <- extract_bayesian_receiver_rankings(bayes_model)
 
@@ -1304,7 +1143,6 @@ if (sys.nframe() == 0) {
       filter(n_targets >= 30) |>
       arrange(desc(BFD_over_expected_mean))
 
-    message("Bayesian mixed-effects model for BFD fit successfully.")
     print(head(bayes_rankings_qualified, 10))
 
     saveRDS(bayes_model, file.path(PROC_DIR, "mixed_effects_model_bayes.rds"))
@@ -1313,12 +1151,10 @@ if (sys.nframe() == 0) {
     message("Bayesian BFD model not fit; skipping Bayesian rankings export.")
   }
 
-  # Save outputs
   saveRDS(mem_model, file.path(PROC_DIR, "mixed_effects_model.rds"))
   write_csv(rankings_qualified, file.path(PROC_DIR, "receiver_rankings.csv"))
   write_csv(mem_metrics, file.path(PROC_DIR, "mixed_effects_metrics.csv"))
 
-  message(paste("Saved model and rankings to", PROC_DIR))
 }
 ```
 
@@ -1341,24 +1177,16 @@ Unlike the mixed‑effects model, which is built around interpretability and rec
 # Exact code used to train the XGBoost model for final separation.
 
 # 07_ml_models.R
-# Description: Predict Final Separation using Gradient Boosting (XGBoost).
-# Goal: Predict d_catch (or BFD) using pre-throw features.
 
 library(tidyverse)
-
+set.seed(123)
 if (!requireNamespace("xgboost", quietly = TRUE) ||
   !requireNamespace("caret", quietly = TRUE)) {
   stop("Packages 'xgboost' and 'caret' are required for 07_ml_models.R. Please install them.")
 }
 
-# --- Functions ---
-
 prepare_ml_data <- function(analysis_df) {
-  # Select features for ML
-  # We want to predict d_catch (or BFD)
-  # Features: core separation metrics + route / coverage / context
 
-  # Only use columns that actually exist (for robustness)
   desired_cols <- c(
     "d_catch", # target
     "d_throw",
@@ -1395,13 +1223,10 @@ prepare_ml_data <- function(analysis_df) {
 }
 
 train_xgboost <- function(ml_df) {
-  # Split Data
-  set.seed(123)
   train_index <- caret::createDataPartition(ml_df$d_catch, p = 0.8, list = FALSE)
   train_data <- ml_df[train_index, ]
   test_data <- ml_df[-train_index, ]
 
-  # Matrix format for XGBoost (one-hot encode factors)
   train_matrix <- model.matrix(d_catch ~ . - 1, data = train_data)
   test_matrix <- model.matrix(d_catch ~ . - 1, data = test_data)
 
@@ -1415,7 +1240,6 @@ train_xgboost <- function(ml_df) {
     label = test_data$d_catch
   )
 
-  # Parameters
   params <- list(
     objective = "reg:squarederror",
     eta = 0.1,
@@ -1424,8 +1248,6 @@ train_xgboost <- function(ml_df) {
     colsample_bytree = 0.8
   )
 
-  # Train
-  message("Training XGBoost model...")
   model <- xgboost::xgb.train(
     params = params,
     data = dtrain,
@@ -1435,12 +1257,9 @@ train_xgboost <- function(ml_df) {
     early_stopping_rounds = 10
   )
 
-  # Feature Importance
   importance <- xgboost::xgb.importance(model = model)
   importance_plot <- xgboost::xgb.plot.importance(importance_matrix = importance)
 
-  # --- Validation metrics ---
-  # Predictions on train and test
   pred_train <- predict(model, dtrain)
   pred_test <- predict(model, dtest)
 
@@ -1462,8 +1281,6 @@ train_xgboost <- function(ml_df) {
     MAE    = c(mae_train, mae_test),
     R2     = c(r2_train, r2_test)
   )
-
-  message("XGBoost validation metrics:")
   print(metrics)
 
   list(
@@ -1479,7 +1296,6 @@ train_xgboost <- function(ml_df) {
   )
 }
 
-# --- Main Execution ---
 
 if (sys.nframe() == 0) {
   if (dir.exists("processed")) {
@@ -1494,13 +1310,10 @@ if (sys.nframe() == 0) {
   if (!file.exists(analysis_path)) stop("analysis_full.rds not found.")
 
   df <- readRDS(analysis_path)
-
-  message("Preparing ML dataset...")
   ml_data <- prepare_ml_data(df)
 
   res <- train_xgboost(ml_data)
 
-  # Save Importance Plot (only if a ggplot object is returned)
   if (!dir.exists("figures")) dir.create("figures")
   if (inherits(res$importance_plot, "ggplot")) {
     importance_fig <- res$importance_plot + ggplot2::theme_minimal(base_size = 14)
@@ -1515,7 +1328,6 @@ if (sys.nframe() == 0) {
     message("Feature importance plot not available; skipping feature_importance.png.")
   }
 
-  # Predicted vs Observed plot (test set)
   p_pred <- ggplot(res$test_diag, aes(x = pred, y = obs)) +
     geom_point(alpha = 0.3, color = "#009E73") +
     geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
@@ -1536,7 +1348,6 @@ if (sys.nframe() == 0) {
 
   saveRDS(res$model, file.path(PROC_DIR, "xgboost_model.rds"))
   write_csv(res$metrics, file.path(PROC_DIR, "xgboost_metrics.csv"))
-  message("Saved xgboost_model.rds, xgboost_metrics.csv, feature_importance.png, and xgboost_pred_vs_observed.png")
 }
 ```
 
@@ -1546,8 +1357,6 @@ if (sys.nframe() == 0) {
 # Exact code used to generate figures for BFD, routes, coverage, and Bayesian intervals.
 
 # 04_visualizations.R
-# Description: Generate plots and visualizations for reports.
-
 library(tidyverse)
 library(ggplot2)
 
@@ -1591,7 +1400,6 @@ plot_BFD_vs_throw_separation <- function(data) {
     )
 }
 
-# BFD by route of targeted receiver
 plot_BFD_by_route <- function(data, min_plays = 50) {
   data |>
     filter(!is.na(route_of_targeted_receiver)) |>
@@ -1637,10 +1445,7 @@ plot_BFD_by_coverage <- function(data, min_plays = 50) {
     )
 }
 
-# --- New: Bayesian interval plots for report ---
-
 plot_bayesian_BFD_intervals <- function(rankings_bayes, top_n = 15) {
-  # Visualize posterior mean and 95% CrI for BFD over expected
   if (!"BFD_over_expected_mean" %in% names(rankings_bayes)) {
     return(NULL)
   }
@@ -1674,13 +1479,10 @@ plot_bayesian_BFD_intervals <- function(rankings_bayes, top_n = 15) {
 }
 
 plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
-  # Visualize posterior mean and 95% CrI for break-open rates (Markov Lift)
   if (!"player_rate_mean" %in% names(lift_bayes)) {
     return(NULL)
   }
 
-  # Handle both legacy and current column names for interval bounds
-  # Legacy CSVs may have `player_rate_lower.2.5%` / `player_rate_upper.97.5%`.
   if ("player_rate_lower.2.5%" %in% names(lift_bayes) &&
     !"player_rate_lower" %in% names(lift_bayes)) {
     lift_bayes <- lift_bayes |>
@@ -1690,7 +1492,6 @@ plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
       )
   }
 
-  # Use player name when available
   if ("targeted_name" %in% names(lift_bayes)) {
     lift_bayes <- lift_bayes |>
       mutate(label = targeted_name)
@@ -1699,7 +1500,6 @@ plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
       mutate(label = as.character(targeted_id))
   }
 
-  # Ensure interval columns exist (they will, given how we write the CSV)
   lift_bayes |>
     filter(!is.na(player_rate_mean)) |>
     slice_max(player_rate_mean, n = top_n, with_ties = FALSE) |>
@@ -1727,7 +1527,6 @@ plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
 }
 
 if (sys.nframe() == 0) {
-  # Source path helpers
   if (file.exists("src/utils_paths.R")) {
     source("src/utils_paths.R")
   } else if (file.exists("utils_paths.R")) {
@@ -1736,12 +1535,10 @@ if (sys.nframe() == 0) {
     stop("Could not find 'utils_paths.R'.")
   }
 
-  # Determine input directory
   PROC_DIR <- get_proc_dir()
 
   analysis_path <- file.path(PROC_DIR, "analysis_full.rds")
   if (!file.exists(analysis_path)) {
-    # Fallback to week 1 if full analysis not run yet
     analysis_path_w1 <- file.path(PROC_DIR, "analysis_w01.rds")
     if (file.exists(analysis_path_w1)) {
       warning("analysis_full.rds not found, using analysis_w01.rds")
@@ -1753,8 +1550,6 @@ if (sys.nframe() == 0) {
 
   df <- readRDS(analysis_path)
 
-  # Optional: align visuals with modeling sample
-  # Keep only WR/TE targets on forward passes when fields are available
   if (all(c("pass_length", "targeted_position") %in% names(df))) {
     message("Filtering visuals to WR/TE forward-pass targets for consistency with modeling...")
     df <- df |>
@@ -1765,14 +1560,12 @@ if (sys.nframe() == 0) {
       )
   }
 
-  # Check for missing BFD values
   missing_BFD <- sum(is.na(df$BFD))
   if (missing_BFD > 0) {
     message(sprintf("Note: Removing %d rows where BFD could not be calculated (likely due to missing defender tracking data in output).", missing_BFD))
     df <- df[!is.na(df$BFD), ]
   }
 
-  # Determine output directory
   FIG_DIR <- get_fig_dir()
 
   p1 <- plot_BFD_distribution(df)
@@ -1794,8 +1587,6 @@ if (sys.nframe() == 0) {
     p5 <- plot_BFD_by_coverage(df)
     ggsave(file.path(FIG_DIR, "BFD_by_coverage.png"), p5, width = 8, height = 6)
   }
-
-  # Bayesian BFD over expected intervals (if available)
   bayes_BFD_path <- file.path(PROC_DIR, "receiver_rankings_bayes.csv")
   if (file.exists(bayes_BFD_path)) {
     rankings_bayes <- read_csv(bayes_BFD_path, show_col_types = FALSE)
@@ -1805,7 +1596,6 @@ if (sys.nframe() == 0) {
     }
   }
 
-  # Bayesian Markov Lift intervals (if available)
   bayes_markov_path <- file.path(PROC_DIR, "markov_lift_rankings_bayes.csv")
   if (file.exists(bayes_markov_path)) {
     lift_bayes <- read_csv(bayes_markov_path, show_col_types = FALSE)
@@ -1814,8 +1604,6 @@ if (sys.nframe() == 0) {
       ggsave(file.path(FIG_DIR, "markov_lift_bayes_intervals.png"), p7, width = 8, height = 6)
     }
   }
-
-  message(paste("Saved figures to", FIG_DIR))
 }
 ```
 
@@ -1849,7 +1637,6 @@ source("src/07_ml_models.R")
 # Helper used throughout the pipeline to resolve processed/figures directories.
 
 ## utils_paths.R
-## Helper functions for resolving project directories consistently.
 
 get_proc_dir <- function() {
     if (dir.exists("processed")) {
@@ -1862,16 +1649,12 @@ get_proc_dir <- function() {
 }
 
 get_fig_dir <- function() {
-    # Prefer the project‑root figures directory if it exists,
-    # so we don't accidentally create multiple figures folders.
     if (dir.exists("../figures")) {
         return("../figures")
     }
     if (dir.exists("figures")) {
         return("figures")
     }
-    # If neither exists, create a figures directory in the current
-    # working directory (e.g., project root) as a fallback.
     dir.create("figures", showWarnings = FALSE)
     "figures"
 }
