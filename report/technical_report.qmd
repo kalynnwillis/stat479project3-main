@@ -170,9 +170,8 @@ identify_targeted_receiver <- function(play_data) {
 
   if (length(tr) == 0) {
     return(NA_integer_)
-  } # no targeted receiver (should be rare)
+  } 
   if (length(tr) > 1) {
-    # if multiple, just take first for now; you can refine later
     warning("Multiple targeted receivers found in one play; taking first.")
     tr <- tr[1]
   }
