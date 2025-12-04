@@ -68,7 +68,7 @@ if (dir.exists("data")) {
 } else if (dir.exists("../data")) {
   DATA_DIR <- "../data"
 } else {
-  warning("Could not find data/ directory. Assuming 'data' but might fail.")
+  warning("Could not find data/ directory.")
   DATA_DIR <- "data"
 }
 
@@ -108,7 +108,7 @@ load_tracking_data <- function(weeks = WEEKS) {
 
 if (sys.nframe() == 0) {
   if (length(list.files(DATA_DIR, pattern = "\\.csv$")) == 0) {
-    stop("No CSV files found in data/ directory. Please download the Big Data Bowl data.")
+    stop("No CSV files found in data/ directory.")
   }
 
   data <- load_tracking_data()
@@ -138,7 +138,7 @@ identify_targeted_receiver <- function(play_data) {
     return(NA_integer_)
   } 
   if (length(tr) > 1) {
-    warning("Multiple targeted receivers found in one play; taking first.")
+    warning("Multiple targeted receivers found in one play")
     tr <- tr[1]
   }
   tr
@@ -190,7 +190,7 @@ compute_play_separation <- function(gid, pid, input_df, output_df) {
   if (nrow(defs_throw) == 0) {
     message(
       "No 'Defensive coverage' labels for game ", gid,
-      ", play ", pid, "; using non-offensive players at throw_frame as defenders."
+      ", play ", pid, ", using non-offensive players at throw_frame as defenders."
     )
     defs_throw <- play_in |>
       filter(!player_role %in% c("Targeted Receiver", "Passer", "Other Route Runner"), frame_id == throw_frame)
@@ -275,7 +275,6 @@ build_play_feature_table <- function(week_data) {
 
     if (i %% 100 == 0) cat(".")
   }
-  cat("\n")
 
   features_df <- if (length(all_features) > 0) dplyr::bind_rows(all_features) else tibble()
   traj_df <- if (length(all_trajectories) > 0) dplyr::bind_rows(all_trajectories) else tibble()
@@ -428,7 +427,7 @@ if (sys.nframe() == 0) {
         by = c("game_id", "play_id")
       )
   } else {
-    message("Supplementary play-level data not found; proceeding without it.")
+    message("Supplementary play-level data not found")
   }
 
   summary_stats <- analysis_df |>
@@ -611,7 +610,7 @@ compute_break_counts <- function(transitions, features_df, min_transitions = 50)
 
 fit_bayesian_markov_model <- function(break_df) {
   if (!requireNamespace("brms", quietly = TRUE)) {
-    warning("Package 'brms' not installed; skipping Bayesian Markov Lift model.")
+    warning("Package 'brms' not installed")
     return(NULL)
   }
 
@@ -688,7 +687,7 @@ if (sys.nframe() == 0) {
   raw_features <- readRDS(file.path(PROC_DIR, "analysis_full.rds"))
 
   if (!all(c("pass_length", "targeted_position") %in% names(raw_features))) {
-    warning("pass_length or targeted_position missing in analysis_full.rds; using all plays for Markov transitions and Lift.")
+    warning("pass_length or targeted_position missing in analysis_full.rds, using all plays for Markov transitions and Lift.")
 
     features_df <- raw_features |>
       select(game_id, play_id, targeted_id)
@@ -756,7 +755,7 @@ if (sys.nframe() == 0) {
     saveRDS(bayes_markov, file.path(PROC_DIR, "markov_lift_bayes_model.rds"))
     write_csv(bayes_lift, file.path(PROC_DIR, "markov_lift_rankings_bayes.csv"))
   } else {
-    message("Bayesian Markov Lift model not fit; skipping Bayesian lift export.")
+    message("Bayesian Markov Lift model not fit, skipping Bayesian lift export.")
   }
 }
 ```
@@ -827,7 +826,7 @@ extract_receiver_rankings <- function(model) {
 
 fit_bayesian_BFD_model <- function(data) {
   if (!requireNamespace("brms", quietly = TRUE)) {
-    warning("Package 'brms' not installed; skipping Bayesian BFD model.")
+    warning("Package 'brms' not installed")
     return(NULL)
   }
 
@@ -859,14 +858,14 @@ extract_bayesian_receiver_rankings <- function(bayes_model) {
     return(NULL)
   }
   if (!requireNamespace("posterior", quietly = TRUE)) {
-    warning("Package 'posterior' not available; skipping Bayesian receiver rankings.")
+    warning("Package 'posterior' not available, skipping Bayesian receiver rankings.")
     return(NULL)
   }
 
   draws <- brms::as_draws_df(bayes_model)
 
   if (!"targeted_id" %in% names(bayes_model$data)) {
-    warning("Model data does not contain 'targeted_id'; skipping Bayesian receiver rankings.")
+    warning("Model data does not contain 'targeted_id', skipping Bayesian receiver rankings.")
     return(NULL)
   }
 
@@ -894,14 +893,14 @@ extract_bayesian_receiver_rankings <- function(bayes_model) {
   summary_list <- purrr::compact(summary_list)
 
   if (length(summary_list) == 0) {
-    warning("No valid posterior random effects found for targeted_id; skipping Bayesian receiver rankings.")
+    warning("No valid posterior random effects found for targeted_id, skipping Bayesian receiver rankings.")
     return(NULL)
   }
 
   summary_df <- dplyr::bind_rows(summary_list)
 
   if (is.null(summary_df) || nrow(summary_df) == 0) {
-    warning("Could not locate any 'r_targeted_id' random effect columns in Bayesian draws; skipping Bayesian receiver rankings.")
+    warning("Could not locate any 'r_targeted_id' random effect columns in Bayesian draws, skipping Bayesian receiver rankings.")
     return(NULL)
   }
 
@@ -973,7 +972,7 @@ if (sys.nframe() == 0) {
 
   df_model <- df_filtered |>
     drop_na(BFD, air_time, d_throw, targeted_id, pass_length, defenders_in_the_box) |>
-    filter(air_time >= 0) |> # Allow 0 air time? No, but >= just in case floating point issues
+    filter(air_time >= 0) |> 
     mutate(
       targeted_id = as.factor(targeted_id),
       game_id = as.factor(game_id),
@@ -1092,7 +1091,7 @@ if (sys.nframe() == 0) {
     saveRDS(bayes_model, file.path(PROC_DIR, "mixed_effects_model_bayes.rds"))
     write_csv(bayes_rankings_qualified, file.path(PROC_DIR, "receiver_rankings_bayes.csv"))
   } else {
-    message("Bayesian BFD model not fit; skipping Bayesian rankings export.")
+    message("Bayesian BFD model not fit, skipping Bayesian rankings export.")
   }
 
   saveRDS(mem_model, file.path(PROC_DIR, "mixed_effects_model.rds"))
@@ -1263,7 +1262,7 @@ if (sys.nframe() == 0) {
       dpi = 300
     )
   } else {
-    message("Feature importance plot not available; skipping feature_importance.png.")
+    message("Feature importance plot not available, skipping feature_importance.png.")
   }
 
   p_pred <- ggplot(res$test_diag, aes(x = pred, y = obs)) +
@@ -1289,29 +1288,6 @@ if (sys.nframe() == 0) {
 }
 ```
 
-### Reproducible Pipeline
-
-All intermediate data products and model outputs flow through a scripted R pipeline. For reproducibility, the main steps are:
-
-```{r}
-#| label: full-pipeline
-#| eval: false
-
-# 1) Feature engineering and separation trajectories for each week
-source("src/01_engineer_features.R")
-
-# 2) Compute BFD and join supplementary play-level context
-source("src/02_compute_BFD.R")
-
-# 3) Fit mixed-effects model and write receiver rankings + metrics
-source("src/03_models.R")
-
-# 4) Compute Markov transition matrix and Markov Lift rankings
-source("src/06_markov_separation.R")
-
-# 5) Train XGBoost model and export feature importance + validation metrics
-source("src/07_ml_models.R")
-```
 
 ```{r}
 #| label: code-utils-paths

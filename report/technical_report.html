@@ -144,30 +144,11 @@ window.Quarto = {
 
 <section id="executive-summary" class="level2">
 <h2 class="anchored" data-anchor-id="executive-summary">Executive Summary</h2>
-<section id="overview" class="level3">
-<h3 class="anchored" data-anchor-id="overview">Overview</h3>
-<p>NFL tracking data tells us how open a receiver is at the throw and at the catch, but it rarely answers a crucial question: <em>what happened while the ball was in the air?</em> Defenders are reacting, the ball is traveling, and receivers are fighting for position, yet most public metrics only capture two snapshots in time. This project introduces <strong>Ball Flight Differential(BFD)</strong>, a play‑level measure of how much separation a targeted receiver gains or loses between the throw and the arrival of the ball, and combines it with a <strong>Markov Lift</strong> metric and a predictive model for final separation.</p>
-<p>Using 2023 regular‑season tracking data from the Big Data Bowl (Weeks 1–18), we reconstruct the full separation trajectory for every targeted receiver. We define BFD as the change in receiver–defender distance during ball flight, categorize separation into four intuitive states (tight, moderate, open, wide open), and model transitions between these states as a Markov chain. On top of this, we fit a mixed‑effects model to separate receiver skill from play context and an XGBoost model that predicts separation at the catch from pre‑throw and situational features.</p>
-</section>
-<section id="approach" class="level3">
-<h3 class="anchored" data-anchor-id="approach">Approach</h3>
-<p>Our analysis proceeds in four steps:</p>
-<ol type="1">
-<li><strong>Play‑level separation</strong>: For each targeted play, we identify the throw and catch (or arrival) frames, compute distance to the nearest defender each frame, and define BFD (Ball-Flight Differential) as the difference between separation (differential) at the catch and at the throw.</li>
-<li><strong>Differential dynamics</strong>: We discretize separation into four states and estimate a league‑wide transition matrix that describes how often receivers move between states frame‑to‑frame. We then compute <strong>Markov Lift</strong> for each receiver: how often they “break open” from tight/moderate to open/wide‑open relative to league average.</li>
-<li><strong>Context‑adjusted skill</strong>: We fit a linear mixed‑effects model for BFD that includes air time, initial differential, and contextual play features as fixed effects and receiver/game effects as random effects. The receiver‑level random effects define <strong>BFD over expected</strong>.</li>
-<li><strong>Predictive model</strong>: We train an XGBoost model to predict final differential using only pre‑throw information (including <span class="math inline">\(d_{throw}\)</span>, air time, and play context), and evaluate its performance on a held‑out test set.</li>
-</ol>
-</section>
-<section id="main-findings" class="level3">
-<h3 class="anchored" data-anchor-id="main-findings">Main Findings</h3>
-<p>League‑wide, receivers usually <strong>lose separation</strong> while the ball is in the air: the mean BFD is <strong>−0.82 yards</strong>, reflecting how defenders naturally close space on most throws, especially deeper passes with longer air time. Longer air time and larger initial differential are both associated with more negative BFD, consistent with regression to the mean and the extra time defenders have to recover. Despite this baseline, a subset of receivers consistently generate <strong>positive BFD over expected</strong>, adding separation even after accounting for route, coverage, and situational factors.</p>
-<p>From the Markov‑chain perspective, separation states are “sticky” from frame to frame, but <strong>breaking open</strong> from tight or moderate coverage is still observable and varies across players. The league‑wide probability of moving from a covered state (tight/moderate) to an open state (open/wide‑open) is <strong>1.49% per frame</strong>, while top receivers exceed this by several percentage points. Our predictive model attains an RMSE of <strong>1.79 yards</strong> for final separation and confirms that initial differential and air time are the dominant predictive features, with context variables providing incremental but smaller gains.</p>
-</section>
-<section id="implications" class="level3">
-<h3 class="anchored" data-anchor-id="implications">Implications</h3>
-<p>For front offices and coaches, this work separates <strong>who created separation</strong> from <strong>who merely benefited from the call or coverage</strong>. BFD over expected attributes in‑air movement skill to receivers after adjusting for down‑and‑distance, route concepts, coverage family, and box count. Markov Lift reframes separation as a <strong>sequence of coverage states</strong> and highlights which receivers are most likely to break open late in the route, a key skill in third‑down and red‑zone situations. The predictive model offers a complementary lens, identifying situations that are inherently separation‑friendly even before the ball is thrown. Together, these tools provide a framework for scouting receivers, designing route concepts, and communicating data‑driven insights in football language rather than purely statistical terms.</p>
-</section>
+<p>During a Week 7 Saints-Bears game in the 2025 regular season, the New Orleans Saints wide receiver Chris Olave caught a 57-yard completion to advance his team to the 20-yard line. A replay of this play can be viewed here: <a href="https://www.youtube.com/watch?v=Fxqq43Bfyf4">Chris Olave 57-yard catch vs Bears (Week 7, 2025)</a>. Throughout the play, Olave gains yards on his defender after the ball is thrown, giving him more space to catch it. NFL tracking data tells where the ball is at the throw, catch, or incomplete, but does not reveal what happened between the receiver and defender while the ball was in flight.</p>
+<p>Using the 2023 regular season tracking data from the Big Data Bowl (Weeks 1 - 18), we analyze the historical receiver-defender separation for every targeted receiver by creating a Ball Flight Differential (BFD) metric. BFD measures differences in separation between the receiver and their nearest defender during the throw. Then, we group separation into four coverage states (“tight”, “moderate”, “open”, and “wide-open”) and measure how often each receiver transitions between states every tenth of a second. This allows us to identify which receivers consistently create separation during ball flight beyond what is expected based on game context. Using information available at the time of the throw, we also predict how much separation will exist at the end of the play.</p>
+<p>Our model and analysis found that league-wide, receivers usually lose separation while the ball is in the air, with the average BFD being −0.82 yards. This means defenders often close the gap on the targeted receiver, especially in certain long throws when the receiver is “waiting” for the ball to catch up to them. Still, some receivers are able to consistently generate a positive BFD Over Expected, which signals to coaches that they are good at creating separation from their defender, even after accounting for route, coverage, etc. For example, Olave has a small, positive BFD Over Expected, where he creates slightly more separation than expected and does so quite consistently. On the other hand, Kalif Raymond has a slightly larger positive BFD Over Expected, where he may create more separation on average, but has less consistency due to scheme, play, routes, etc.</p>
+<p>We observed that the league-wide probability of receivers opening up from being covered is about 1.5% of the time per tenth of a second. However, top receivers get themselves open more often by beating that within a few extra percentage points. Our predictive models show that late separation is most influenced by a receiver’s initial separation and the ball’s air time.</p>
+<p>These metrics support coaches and scouts in determining which receivers created separation based on their skill alone, rather than other contextual factors. Our analysis helps identify the receivers that create openness late in their running route, which is significant when there are critical downs. Coaches can use the predictive model to design plays that maximize separation opportunities between receivers and their defenders.</p>
 </section>
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
@@ -893,50 +874,10 @@ p^{\text{league}}_{\text{break}} = P(S_{t+1} \in \{2,3\} \mid S_t \in \{0,1\})
 </details>
 </div>
 </section>
-<section id="predictors-and-rationale" class="level3">
-<h3 class="anchored" data-anchor-id="predictors-and-rationale">Predictors and Rationale</h3>
-<p>Our goal in the mixed‑effects model is to explain how much separation a receiver gains or loses while the ball is in the air. Each covariate is chosen to capture one of three ideas:</p>
-<ul>
-<li><strong>Opportunity for movement</strong>: how much time and space the receiver has to change leverage mid‑route.</li>
-<li><strong>Coverage difficulty</strong>: how constrained the receiver’s movement is by the defensive structure.</li>
-<li><strong>Route‑level context</strong>: how much in‑air adjustment a particular route concept naturally allows.</li>
-</ul>
-<section id="opportunity-variables" class="level4">
-<h4 class="anchored" data-anchor-id="opportunity-variables">Opportunity variables</h4>
-<p>These covariates describe the “canvas” on which in‑air separation can change:</p>
-<ul>
-<li><strong>Air Time (scaled)</strong>: Longer throws provide more frames for defenders to close and receivers to separate. Because separation change is inherently time‑dependent, controlling for air time prevents deep throws from being treated as “better” simply because they last longer.</li>
-<li><strong>Distance at Throw (scaled)</strong>: Starting leverage matters. A receiver who is already wide open at release should not be credited for “gaining” separation just because the defender begins far away.</li>
-<li><strong>Pass Length (scaled)</strong>: A proxy for route depth. Deeper routes differ systematically in defender recovery behavior, ball flight, and the amount of space receivers can work with.</li>
-</ul>
-</section>
-<section id="coverage-difficulty-variables" class="level4">
-<h4 class="anchored" data-anchor-id="coverage-difficulty-variables">Coverage difficulty variables</h4>
-<p>These terms represent how challenging the coverage environment is for creating separation:</p>
-<ul>
-<li><strong>Defenders in the Box (scaled)</strong>: Higher counts often correspond to tighter formations or heavier defensive fronts, which correlate with man coverage, press looks, or aggressive safety rotations that shape initial leverage and recovery angles.</li>
-<li><strong>Team coverage indicators (Man vs.&nbsp;Zone / coverage family)</strong>: Coverage scheme determines defender responsibilities. In man coverage, separation changes primarily reflect one‑on‑one matchups; in zone, they reflect how well receivers find and exploit space between defenders.</li>
-</ul>
-</section>
-<section id="routelevel-context" class="level4">
-<h4 class="anchored" data-anchor-id="routelevel-context">Route‑level context</h4>
-<p>Routes differ substantially in how much in‑air adjustment they permit:</p>
-<ul>
-<li><strong>Route of Targeted Receiver</strong>: A vertical “go” route offers more variance in in‑air separation than a shallow drag or quick out. Including route family prevents us from attributing route‑driven patterns (e.g., back‑shoulder fades, crossers vs.&nbsp;curls) to the receiver’s individual skill.</li>
-</ul>
-</section>
-<section id="random-effects" class="level4">
-<h4 class="anchored" data-anchor-id="random-effects">Random effects</h4>
-<p>Finally, we use random effects to respect the nested structure of the data:</p>
-<ul>
-<li><strong>Receiver random intercept <span class="math inline">\((1 \mid \text{targeted\_id})\)</span></strong>: Captures persistent, player‑specific deviations in BFD over expected after controlling for the fixed‑effect covariates—our notion of in‑air separation skill.</li>
-<li><strong>Game random intercept <span class="math inline">\((1 \mid \text{game\_id})\)</span></strong>: Accounts for shared game‑level conditions such as opponent quality, weather, and scheme tendencies that affect all plays within a game.</li>
-</ul>
-</section>
-</section>
 <section id="mixedeffects-model-for-bfd-over-expected" class="level3">
 <h3 class="anchored" data-anchor-id="mixedeffects-model-for-bfd-over-expected">Mixed‑Effects Model for BFD over Expected</h3>
-<p>Raw BFD conflates receiver skill with <strong>context</strong>: longer air‑time throws, high‑leverage downs, and certain route/coverage combinations are naturally harder environments in which to gain separation. To isolate receiver skill, we fit a <strong>linear mixed‑effects model</strong>:</p>
+<p>An evident limitation of the BFD model is that it includes many uncontrolled context variables, such as longer air-time throws or certain running routes.</p>
+<p>So, we fit a linear mixed-effects BFD model to control for these variables:</p>
 <p><span class="math display">\[
 BFD_{\text{play}} = \beta_0
   + \beta_1 \cdot \text{Air Time}
@@ -946,17 +887,10 @@ BFD_{\text{play}} = \beta_0
   + u_{\text{game}}
   + \epsilon,
 \]</span></p>
-<p>where:</p>
-<ul>
-<li><span class="math inline">\(\mathbf{x}_{\text{play}}\)</span> encodes contextual fixed effects (e.g., route family, coverage family, box count, down‑and‑distance).</li>
-<li><span class="math inline">\(u_{\text{receiver}}\)</span> is a receiver‑level random effect capturing <strong>in‑air separation skill</strong> not explained by context.</li>
-<li><span class="math inline">\(u_{\text{game}}\)</span> is a game‑level random effect capturing shared conditions within a game (e.g., weather, opponent tendencies).</li>
-<li><span class="math inline">\(\epsilon\)</span> is residual error.</li>
-</ul>
-<p>We estimate the model using standard mixed‑effects software and summarize receiver skill via <strong>BFD over expected</strong>, defined as the estimated receiver random effect <span class="math inline">\(u_{\text{receiver}}\)</span>. Intuitively, a receiver with <span class="math inline">\(u_{\text{receiver}} = +0.4\)</span> tends to finish plays with roughly 0.4 yards more in‑air separation than expected, conditional on their route mix and situations; a receiver with <span class="math inline">\(u_{\text{receiver}} = -0.3\)</span> tends to lose additional separation relative to expectation.</p>
-<p>In our implementation, we standardize the continuous predictors (air time, <span class="math inline">\(d_{throw}\)</span>, pass length, and defenders in the box) before fitting, so the model is actually fit on scaled versions of these variables. The equation above is written in terms of the original units for interpretability, but the reported coefficients in the model summaries correspond to one‑standard‑deviation changes in each continuous predictor rather than one‑yard or one‑second changes.</p>
-<p>For football interpretability, we <strong>restrict the modeling sample to wide receivers and tight ends on forward passes</strong> and include <strong>position (WR vs.&nbsp;TE) as a fixed effect</strong>, allowing baseline separation change to differ by role. All such targets are included in the mixed‑effects and Bayesian models (with partial pooling shrinking low‑volume players toward the league mean), while we later apply a minimum‑volume cutoff when displaying leaderboards.</p>
-<p>To quantify uncertainty in these receiver effects, we also fit a <strong>Bayesian analogue</strong> of the mixed‑effects model using weakly informative priors on the fixed effects and on the receiver/game random‑effect standard deviations. This yields a posterior distribution for each receiver’s BFD over expected, from which we report posterior means and 95% credible intervals; players with few targets naturally have wider intervals, reflecting greater uncertainty in their estimated in‑air separation skill.</p>
+<p>To explain this model, we measure the air time and distance at throw coefficients. We also control for the contextual fixed effects (like route, box count, down, etc.), a receiver-level random effect capturing their separation skill after controlling for context, and a game-level random effect capturing shared conditions (like weather, opponents, etc.).</p>
+<p>We measure BFD over expected, which is defined as the estimated receiver random effect. So if this effect is positive, receivers are creating separation from their defender, and if it’s negative, their defender is getting closer.</p>
+<p>To make it more interpretable, we restrict our modeling to forward passes only and have wide receivers and tight ends as a fixed effect.</p>
+<p>We also know there will be uncertainty in our estimates, so we fit a Bayesian analogue of the mixed-effects model. Our priors are used on the fixed effects and on the random-effect standard deviations. This generates a posterior distribution for each receiver’s BFD over expected. Receivers whose BFD over expected was modeled on fewer catches will have wider intervals, reflecting greater uncertainty in our estimate of their Ball-Flight Differential skill.</p>
 <p>Model diagnostics (fitted vs.&nbsp;observed BFD and residual distributions) are used to assess linearity, variance assumptions, and the contribution of random effects.</p>
 <div class="cell">
 <details class="code-fold">
@@ -1276,15 +1210,8 @@ BFD_{\text{play}} = \beta_0
 </section>
 <section id="predictive-modeling-of-final-separation-xgboost" class="level3">
 <h3 class="anchored" data-anchor-id="predictive-modeling-of-final-separation-xgboost">Predictive Modeling of Final Separation (XGBoost)</h3>
-<p>While the mixed‑effects model attributes skill to receivers, we also ask a complementary question: <strong>given what we know at the throw, how much separation should we expect at the catch?</strong> To answer this, we fit a gradient‑boosted tree model (XGBoost) to predict <span class="math inline">\(d_{catch}\)</span> using only pre‑throw or contemporaneous features, including:</p>
-<ul>
-<li>Initial Differential <span class="math inline">\(d_{throw}\)</span></li>
-<li>Air time</li>
-<li>Play context (down, distance, field position)</li>
-<li>Aggregated route/coverage indicators and defensive structure variables</li>
-</ul>
-<p>We train the model on a subset of plays and hold out a test set to evaluate performance. Our primary metric is <strong>Root Mean Squared Error (RMSE)</strong> in yards, supplemented by visual inspection of predicted vs.&nbsp;observed separation and a feature importance analysis.</p>
-<p>Unlike the mixed‑effects model, which is built around interpretability and receiver random effects, XGBoost is optimized for predictive accuracy and can capture <strong>non‑linear interactions</strong> between features (e.g., how air time interacts with initial differential differently on certain route types).</p>
+<p>While the mixed‑effects model attributes skill to receivers, we also ask: given what we know at the throw, how much separation should we expect at the catch? To answer this, we fit a gradient‑boosted tree model (XGBoost) to predict <span class="math inline">\(d_{catch}\)</span> using only pre‑throw features, including initial differential, air time, play context variables, and route indicators.</p>
+<p>We trained the model on 80% of the randomly sampled plays in our dataset and reserved the remaining 20% as a test set to evaluate predictive performance. We use Root Mean Squared Error in yards to evaluate the performance.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show code</summary>
