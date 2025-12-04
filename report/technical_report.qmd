@@ -1351,262 +1351,6 @@ if (sys.nframe() == 0) {
 }
 ```
 
-```{r}
-#| label: code-visualizations
-#| eval: false
-# Exact code used to generate figures for BFD, routes, coverage, and Bayesian intervals.
-
-# 04_visualizations.R
-library(tidyverse)
-library(ggplot2)
-
-plot_BFD_distribution <- function(data) {
-  ggplot(data, aes(x = BFD)) +
-    geom_histogram(binwidth = 0.5, fill = "#0072B2", color = "white", alpha = 0.8) +
-    geom_vline(xintercept = 0, linetype = "dashed", color = "red", linewidth = 1) +
-    theme_minimal() +
-    labs(
-      title = "Distribution of Ball-Flight Differential added (BFD)",
-      subtitle = "Full Data Analysis",
-      x = "BFD (Yards Gained/Lost)",
-      y = "Number of Plays",
-      caption = "Positive BFD = Separation Gained, Negative BFD = Separation Lost"
-    )
-}
-
-plot_BFD_vs_airtime <- function(data) {
-  ggplot(data, aes(x = air_time, y = BFD)) +
-    geom_point(alpha = 0.5, color = "#D55E00") +
-    geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") +
-    theme_minimal() +
-    labs(
-      title = "BFD vs. Air Time",
-      subtitle = "Longer throws give defenders more time to close in",
-      x = "Air Time (seconds)",
-      y = "BFD (Yards)"
-    )
-}
-
-plot_BFD_vs_throw_separation <- function(data) {
-  ggplot(data, aes(x = d_throw, y = BFD)) +
-    geom_point(alpha = 0.5, color = "#009E73") +
-    geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") +
-    theme_minimal() +
-    labs(
-      title = "BFD vs. Initial Differential at Throw",
-      subtitle = "Regression to the mean: Open receivers tend to lose separation",
-      x = "Separation at Throw (Yards)",
-      y = "BFD (Yards)"
-    )
-}
-
-plot_BFD_by_route <- function(data, min_plays = 50) {
-  data |>
-    filter(!is.na(route_of_targeted_receiver)) |>
-    group_by(route_of_targeted_receiver) |>
-    summarise(
-      n = n(),
-      avg_BFD = mean(BFD, na.rm = TRUE)
-    ) |>
-    filter(n >= min_plays) |>
-    arrange(desc(avg_BFD)) |>
-    mutate(route_of_targeted_receiver = fct_reorder(route_of_targeted_receiver, avg_BFD)) |>
-    ggplot(aes(x = route_of_targeted_receiver, y = avg_BFD)) +
-    geom_col(fill = "#0072B2") +
-    coord_flip() +
-    theme_minimal() +
-    labs(
-      title = "Average BFD by Route Type",
-      subtitle = paste("Routes with at least", min_plays, "plays"),
-      x = "Route of Targeted Receiver",
-      y = "Average BFD (Yards)"
-    )
-}
-
-# BFD by coverage type (man/zone)
-plot_BFD_by_coverage <- function(data, min_plays = 50) {
-  data |>
-    filter(!is.na(team_coverage_man_zone)) |>
-    group_by(team_coverage_man_zone) |>
-    summarise(
-      n = n(),
-      avg_BFD = mean(BFD, na.rm = TRUE)
-    ) |>
-    filter(n >= min_plays) |>
-    ggplot(aes(x = fct_reorder(team_coverage_man_zone, avg_BFD), y = avg_BFD)) +
-    geom_col(fill = "#D55E00") +
-    coord_flip() +
-    theme_minimal() +
-    labs(
-      title = "Average BFD by Coverage Family",
-      subtitle = paste("Man vs Zone concepts (at least", min_plays, "plays)"),
-      x = "Coverage (Man/Zone)",
-      y = "Average BFD (Yards)"
-    )
-}
-
-plot_bayesian_BFD_intervals <- function(rankings_bayes, top_n = 15) {
-  if (!"BFD_over_expected_mean" %in% names(rankings_bayes)) {
-    return(NULL)
-  }
-
-  if ("targeted_name" %in% names(rankings_bayes)) {
-    rankings_bayes <- rankings_bayes |>
-      mutate(label = targeted_name)
-  } else {
-    rankings_bayes <- rankings_bayes |>
-      mutate(label = as.character(nfl_id))
-  }
-
-  rankings_bayes |>
-    filter(!is.na(BFD_over_expected_mean)) |>
-    slice_max(BFD_over_expected_mean, n = top_n, with_ties = FALSE) |>
-    mutate(label = fct_reorder(label, BFD_over_expected_mean)) |>
-    ggplot(aes(x = label, y = BFD_over_expected_mean)) +
-    geom_point(color = "#0072B2") +
-    geom_errorbar(
-      aes(ymin = BFD_over_expected_lower, ymax = BFD_over_expected_upper),
-      width = 0
-    ) +
-    coord_flip() +
-    theme_minimal() +
-    labs(
-      title = "Top Receivers by BFD Over Expected (Bayesian)",
-      subtitle = "Posterior mean and 95% credible intervals",
-      x = "Receiver",
-      y = "BFD Over Expected (Yards)"
-    )
-}
-
-plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
-  if (!"player_rate_mean" %in% names(lift_bayes)) {
-    return(NULL)
-  }
-
-  if ("player_rate_lower.2.5%" %in% names(lift_bayes) &&
-    !"player_rate_lower" %in% names(lift_bayes)) {
-    lift_bayes <- lift_bayes |>
-      dplyr::rename(
-        player_rate_lower = `player_rate_lower.2.5%`,
-        player_rate_upper = `player_rate_upper.97.5%`
-      )
-  }
-
-  if ("targeted_name" %in% names(lift_bayes)) {
-    lift_bayes <- lift_bayes |>
-      mutate(label = targeted_name)
-  } else {
-    lift_bayes <- lift_bayes |>
-      mutate(label = as.character(targeted_id))
-  }
-
-  lift_bayes |>
-    filter(!is.na(player_rate_mean)) |>
-    slice_max(player_rate_mean, n = top_n, with_ties = FALSE) |>
-    mutate(
-      label = fct_reorder(label, player_rate_mean),
-      player_rate_pct = player_rate_mean
-    ) |>
-    ggplot(aes(x = label, y = player_rate_pct)) +
-    geom_point(color = "#D55E00") +
-    geom_errorbar(
-      aes(
-        ymin = player_rate_lower,
-        ymax = player_rate_upper
-      ),
-      width = 0
-    ) +
-    coord_flip() +
-    theme_minimal() +
-    labs(
-      title = "Top Receivers by Break-Open Rate (Bayesian Markov Lift)",
-      subtitle = "Per-frame break-open probability with 95% credible intervals",
-      x = "Receiver",
-      y = "Break-Open Probability (%)"
-    )
-}
-
-if (sys.nframe() == 0) {
-  if (file.exists("src/utils_paths.R")) {
-    source("src/utils_paths.R")
-  } else if (file.exists("utils_paths.R")) {
-    source("utils_paths.R")
-  } else {
-    stop("Could not find 'utils_paths.R'.")
-  }
-
-  PROC_DIR <- get_proc_dir()
-
-  analysis_path <- file.path(PROC_DIR, "analysis_full.rds")
-  if (!file.exists(analysis_path)) {
-    analysis_path_w1 <- file.path(PROC_DIR, "analysis_w01.rds")
-    if (file.exists(analysis_path_w1)) {
-      warning("analysis_full.rds not found, using analysis_w01.rds")
-      analysis_path <- analysis_path_w1
-    } else {
-      stop(paste(analysis_path, "not found. Run 02_compute_BFD.R first."))
-    }
-  }
-
-  df <- readRDS(analysis_path)
-
-  if (all(c("pass_length", "targeted_position") %in% names(df))) {
-    message("Filtering visuals to WR/TE forward-pass targets for consistency with modeling...")
-    df <- df |>
-      filter(
-        !is.na(pass_length),
-        pass_length > 0,
-        targeted_position %in% c("WR", "TE")
-      )
-  }
-
-  missing_BFD <- sum(is.na(df$BFD))
-  if (missing_BFD > 0) {
-    message(sprintf("Note: Removing %d rows where BFD could not be calculated (likely due to missing defender tracking data in output).", missing_BFD))
-    df <- df[!is.na(df$BFD), ]
-  }
-
-  FIG_DIR <- get_fig_dir()
-
-  p1 <- plot_BFD_distribution(df)
-  ggsave(file.path(FIG_DIR, "BFD_distribution.png"), p1, width = 8, height = 5)
-
-  p2 <- plot_BFD_vs_airtime(df)
-  ggsave(file.path(FIG_DIR, "BFD_vs_airtime.png"), p2, width = 8, height = 5)
-
-  p3 <- plot_BFD_vs_throw_separation(df)
-  ggsave(file.path(FIG_DIR, "BFD_vs_dthrow.png"), p3, width = 8, height = 5)
-
-  # New contextual plots if supplementary data is present
-  if ("route_of_targeted_receiver" %in% names(df)) {
-    p4 <- plot_BFD_by_route(df)
-    ggsave(file.path(FIG_DIR, "BFD_by_route.png"), p4, width = 8, height = 6)
-  }
-
-  if ("team_coverage_man_zone" %in% names(df)) {
-    p5 <- plot_BFD_by_coverage(df)
-    ggsave(file.path(FIG_DIR, "BFD_by_coverage.png"), p5, width = 8, height = 6)
-  }
-  bayes_BFD_path <- file.path(PROC_DIR, "receiver_rankings_bayes.csv")
-  if (file.exists(bayes_BFD_path)) {
-    rankings_bayes <- read_csv(bayes_BFD_path, show_col_types = FALSE)
-    p6 <- plot_bayesian_BFD_intervals(rankings_bayes, top_n = 15)
-    if (!is.null(p6)) {
-      ggsave(file.path(FIG_DIR, "receiver_BFD_bayes_intervals.png"), p6, width = 8, height = 6)
-    }
-  }
-
-  bayes_markov_path <- file.path(PROC_DIR, "markov_lift_rankings_bayes.csv")
-  if (file.exists(bayes_markov_path)) {
-    lift_bayes <- read_csv(bayes_markov_path, show_col_types = FALSE)
-    p7 <- plot_bayesian_markov_intervals(lift_bayes, top_n = 15)
-    if (!is.null(p7)) {
-      ggsave(file.path(FIG_DIR, "markov_lift_bayes_intervals.png"), p7, width = 8, height = 6)
-    }
-  }
-}
-```
-
 ### Reproducible Pipeline
 
 All intermediate data products and model outputs flow through a scripted R pipeline. For reproducibility, the main steps are:
@@ -1667,53 +1411,19 @@ get_fig_dir <- function() {
 ```{r}
 #| label: code-bfd-distribution
 #| eval: false
-# Code used to generate ../figures/BFD_distribution.png
-#
-# This code mirrors src/04_visualizations.R.
-
-if (file.exists("src/utils_paths.R")) {
-  source("src/utils_paths.R")
-} else if (file.exists("utils_paths.R")) {
-  source("utils_paths.R")
-} else {
-  stop("Could not find 'utils_paths.R'.")
-}
-
-PROC_DIR <- get_proc_dir()
-
-analysis_path <- file.path(PROC_DIR, "analysis_full.rds")
-if (!file.exists(analysis_path)) {
-  analysis_path_w1 <- file.path(PROC_DIR, "analysis_w01.rds")
-  if (file.exists(analysis_path_w1)) {
-    warning("analysis_full.rds not found, using analysis_w01.rds")
-    analysis_path <- analysis_path_w1
-  } else {
-    stop(paste(analysis_path, "not found. Run 02_compute_BFD.R first."))
-  }
-}
-
-df <- readRDS(analysis_path)
-
-if (all(c("pass_length", "targeted_position") %in% names(df))) {
-  message("Filtering visuals to WR/TE forward-pass targets for consistency with modeling...")
-  df <- df |>
-    dplyr::filter(
-      !is.na(pass_length),
-      pass_length > 0,
-      targeted_position %in% c("WR", "TE")
+plot_BFD_distribution <- function(data) {
+  ggplot(data, aes(x = BFD)) +
+    geom_histogram(binwidth = 0.5, fill = "#0072B2", color = "white", alpha = 0.8) +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "red", linewidth = 1) +
+    theme_minimal() +
+    labs(
+      title = "Distribution of Ball-Flight Differential added (BFD)",
+      subtitle = "Full Data Analysis",
+      x = "BFD (Yards Gained/Lost)",
+      y = "Number of Plays",
+      caption = "Positive BFD = Separation Gained, Negative BFD = Separation Lost"
     )
 }
-
-missing_BFD <- sum(is.na(df$BFD))
-if (missing_BFD > 0) {
-  message(sprintf(
-    "Note: Removing %d rows where BFD could not be calculated (likely due to missing defender tracking data in output).",
-    missing_BFD
-  ))
-  df <- df[!is.na(df$BFD), ]
-}
-
-FIG_DIR <- get_fig_dir()
 
 p1 <- plot_BFD_distribution(df)
 ggsave(file.path(FIG_DIR, "BFD_distribution.png"), p1, width = 8, height = 5)
@@ -1733,9 +1443,18 @@ The mixed effects model shows how initial differential, air time, and context ar
 ```{r}
 #| label: code-bfd-vs-airtime
 #| eval: false
-# Code used to generate ../figures/BFD_vs_airtime.png
-#
-# Assumes df and FIG_DIR have been created as in the code-bfd-distribution chunk above.
+plot_BFD_vs_airtime <- function(data) {
+  ggplot(data, aes(x = air_time, y = BFD)) +
+    geom_point(alpha = 0.5, color = "#D55E00") +
+    geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") +
+    theme_minimal() +
+    labs(
+      title = "BFD vs. Air Time",
+      subtitle = "Longer throws give defenders more time to close in",
+      x = "Air Time (seconds)",
+      y = "BFD (Yards)"
+    )
+}
 
 p2 <- plot_BFD_vs_airtime(df)
 ggsave(file.path(FIG_DIR, "BFD_vs_airtime.png"), p2, width = 8, height = 5)
@@ -1747,9 +1466,18 @@ Air Time shows that the longer the throw, the more separation is lost. The coeff
 ```{r}
 #| label: code-bfd-vs-dthrow
 #| eval: false
-# Code used to generate ../figures/BFD_vs_dthrow.png
-#
-# Assumes df and FIG_DIR have been created as in the code-bfd-distribution chunk above.
+plot_BFD_vs_throw_separation <- function(data) {
+  ggplot(data, aes(x = d_throw, y = BFD)) +
+    geom_point(alpha = 0.5, color = "#009E73") +
+    geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") +
+    theme_minimal() +
+    labs(
+      title = "BFD vs. Initial Differential at Throw",
+      subtitle = "Regression to the mean: Open receivers tend to lose separation",
+      x = "Separation at Throw (Yards)",
+      y = "BFD (Yards)"
+    )
+}
 
 p3 <- plot_BFD_vs_throw_separation(df)
 ggsave(file.path(FIG_DIR, "BFD_vs_dthrow.png"), p3, width = 8, height = 5)
@@ -1758,6 +1486,41 @@ ggsave(file.path(FIG_DIR, "BFD_vs_dthrow.png"), p3, width = 8, height = 5)
 ![BFD vs Initial Differential](../figures/BFD_vs_dthrow.png)
 
 Initial Differential shows that extreme situations move back toward normal by the time the ball arrives, as the coefficient is -0.39 which is statistically significant with a p-value < .01. Routes open at the throw basically, extreme situations tend to move back toward “normal” by the time the ball arrives. For every extra yard of openness when the ball is thrown, the receiver loses about 0.39 yards of advantage by the time the ball throw is completed.
+
+```{r}
+#| label: code-mixed-effects-figures
+#| eval: false
+library(ggplot2)
+
+p_fit <- ggplot(diag_df, aes(x = fitted, y = BFD)) +
+  geom_point(alpha = 0.3, color = "#0072B2") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() +
+  labs(
+    title = "Mixed-Effects Model: Fitted vs Observed BFD",
+    x = "Fitted BFD",
+    y = "Observed BFD"
+  )
+
+ggsave(
+  filename = file.path(FIG_DIR, "mixed_effects_fitted_vs_observed.png"),
+  plot = p_fit,
+  width = 8, height = 5, dpi = 300)
+
+p_resid <- ggplot(diag_df, aes(x = resid)) +
+  geom_histogram(bins = 40, fill = "#D55E00", color = "white", alpha = 0.8) +
+  theme_minimal() +
+  labs(
+    title = "Mixed-Effects Model Residuals (BFD)",
+    x = "Residual",
+    y = "Count"
+  )
+
+ggsave(
+  filename = file.path(FIG_DIR, "mixed_effects_residuals_hist.png"),
+  plot = p_resid,
+  width = 8, height = 5, dpi = 300)
+```
 
 ![Mixed-Effects Fitted vs Observed](../figures/mixed_effects_fitted_vs_observed.png)
 
@@ -1769,6 +1532,29 @@ The air time, initial differential, and covariates explain a meaningful part of 
 
 
 ### Markov Chain 
+
+```{r}
+#| label: code-markov-transitions
+#| eval: false
+plot_transition_matrix <- function(trans_probs) {
+  ggplot(trans_probs, aes(x = next_state, y = fct_rev(state), fill = prob)) +
+    geom_tile() +
+    geom_text(aes(label = round(prob, 2)), color = "white") +
+    scale_fill_gradient(low = "navy", high = "red") +
+    theme_minimal() +
+    labs(
+      title = "Separation State Transition Probabilities",
+      subtitle = "Probability of moving from State Y to State X in next frame",
+      x = "Next State",
+      y = "Current State",
+      fill = "Probability"
+    )
+}
+
+p <- plot_transition_matrix(tm)
+FIG_DIR <- get_fig_dir()
+ggsave(file.path(FIG_DIR, "markov_transitions.png"), p, width = 8, height = 6)
+```
 
 ![Markov Transition Matrix](../figures/markov_transitions.png)
 
@@ -1854,16 +1640,57 @@ Thus, receivers who run a lot of routes and typically create space have smaller 
 ```{r}
 #| label: code-markov-lift-bayes-intervals
 #| eval: false
-# Code used to generate ../figures/markov_lift_bayes_intervals.png
-#
-# Assumes get_proc_dir() and get_fig_dir() are available from utils_paths.R as shown earlier.
+plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
+  if (!"player_rate_mean" %in% names(lift_bayes)) {
+    return(NULL)
+  }
 
-PROC_DIR <- get_proc_dir()
-FIG_DIR <- get_fig_dir()
+  if ("player_rate_lower.2.5%" %in% names(lift_bayes) &&
+    !"player_rate_lower" %in% names(lift_bayes)) {
+    lift_bayes <- lift_bayes |>
+      dplyr::rename(
+        player_rate_lower = `player_rate_lower.2.5%`,
+        player_rate_upper = `player_rate_upper.97.5%`
+      )
+  }
+
+  if ("targeted_name" %in% names(lift_bayes)) {
+    lift_bayes <- lift_bayes |>
+      mutate(label = targeted_name)
+  } else {
+    lift_bayes <- lift_bayes |>
+      mutate(label = as.character(targeted_id))
+  }
+
+  lift_bayes |>
+    filter(!is.na(player_rate_mean)) |>
+    slice_max(player_rate_mean, n = top_n, with_ties = FALSE) |>
+    mutate(
+      label = fct_reorder(label, player_rate_mean),
+      player_rate_pct = player_rate_mean
+    ) |>
+    ggplot(aes(x = label, y = player_rate_pct)) +
+    geom_point(color = "#D55E00") +
+    geom_errorbar(
+      aes(
+        ymin = player_rate_lower,
+        ymax = player_rate_upper
+      ),
+      width = 0
+    ) +
+    coord_flip() +
+    theme_minimal() +
+    labs(
+      title = "Top Receivers by Break-Open Rate (Bayesian Markov Lift)",
+      subtitle = "Per-frame break-open probability with 95% credible intervals",
+      x = "Receiver",
+      y = "Break-Open Probability (%)"
+    )
+}
 
 bayes_markov_path <- file.path(PROC_DIR, "markov_lift_rankings_bayes.csv")
 if (file.exists(bayes_markov_path)) {
-  lift_bayes <- readr::read_csv(bayes_markov_path, show_col_types = FALSE)
+  lift_bayes <- read_csv(bayes_markov_path, show_col_types = FALSE)
   p7 <- plot_bayesian_markov_intervals(lift_bayes, top_n = 15)
   if (!is.null(p7)) {
     ggsave(file.path(FIG_DIR, "markov_lift_bayes_intervals.png"), p7, width = 8, height = 6)
@@ -1885,14 +1712,29 @@ On the held‑out test set, the model attains an RMSE of **1.79 yards**, meaning
 
 Overall, the model's scores to determine the signficance of various features shows that Initial Differential is most predictive, then Air Time follows suit. While there are other features that help explain and predict the results, they are not as impactful to the model. Below, we can see the predicted versus observed plot to show how the points have moderate variance:
 
+```{r}
+#| label: code-xgboost-pred-vs-observed
+#| eval: false
+p_pred <- ggplot(res$test_diag, aes(x = pred, y = obs)) +
+  geom_point(alpha = 0.3, color = "#009E73") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal() +
+  labs(
+    title = "XGBoost: Predicted vs Observed d_catch (Test Set)",
+    x = "Predicted d_catch",
+    y = "Observed d_catch"
+  )
+
+ggplot2::ggsave(
+  filename = file.path("figures", "xgboost_pred_vs_observed.png"),
+  plot = p_pred,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+```
+
 ![XGBoost Predicted vs Observed](../figures/xgboost_pred_vs_observed.png)
-
-These inputs provide the most accuracy in our predictions:
-
-![XGBoost Feature Importance](../figures/feature_importance.png)
-
-This shows noisy outcomes with high-variance where the variance is not fully captured in our model features, which can include ball placement, contact between players on the field, etc.
-
 
 ### Top Receivers (Ball-Flight Differential Over Expected)
 
@@ -1972,16 +1814,42 @@ For example, Chris Olave has an BFD Over Expected of about 0.15, with a narrower
 ```{r}
 #| label: code-bfd-bayes-intervals
 #| eval: false
-# Code used to generate ../figures/receiver_BFD_bayes_intervals.png
-#
-# Assumes get_proc_dir() and get_fig_dir() are available from utils_paths.R as shown earlier.
+plot_bayesian_BFD_intervals <- function(rankings_bayes, top_n = 15) {
+  if (!"BFD_over_expected_mean" %in% names(rankings_bayes)) {
+    return(NULL)
+  }
 
-PROC_DIR <- get_proc_dir()
-FIG_DIR <- get_fig_dir()
+  if ("targeted_name" %in% names(rankings_bayes)) {
+    rankings_bayes <- rankings_bayes |>
+      mutate(label = targeted_name)
+  } else {
+    rankings_bayes <- rankings_bayes |>
+      mutate(label = as.character(nfl_id))
+  }
+
+  rankings_bayes |>
+    filter(!is.na(BFD_over_expected_mean)) |>
+    slice_max(BFD_over_expected_mean, n = top_n, with_ties = FALSE) |>
+    mutate(label = fct_reorder(label, BFD_over_expected_mean)) |>
+    ggplot(aes(x = label, y = BFD_over_expected_mean)) +
+    geom_point(color = "#0072B2") +
+    geom_errorbar(
+      aes(ymin = BFD_over_expected_lower, ymax = BFD_over_expected_upper),
+      width = 0
+    ) +
+    coord_flip() +
+    theme_minimal() +
+    labs(
+      title = "Top Receivers by BFD Over Expected (Bayesian)",
+      subtitle = "Posterior mean and 95% credible intervals",
+      x = "Receiver",
+      y = "BFD Over Expected (Yards)"
+    )
+}
 
 bayes_BFD_path <- file.path(PROC_DIR, "receiver_rankings_bayes.csv")
 if (file.exists(bayes_BFD_path)) {
-  rankings_bayes <- readr::read_csv(bayes_BFD_path, show_col_types = FALSE)
+  rankings_bayes <- read_csv(bayes_BFD_path, show_col_types = FALSE)
   p6 <- plot_bayesian_BFD_intervals(rankings_bayes, top_n = 15)
   if (!is.null(p6)) {
     ggsave(file.path(FIG_DIR, "receiver_BFD_bayes_intervals.png"), p6, width = 8, height = 6)
