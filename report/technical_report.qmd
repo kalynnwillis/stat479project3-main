@@ -1664,6 +1664,61 @@ get_fig_dir <- function() {
 
 ### Separation Dynamics (BFD)
 
+```{r}
+#| label: code-bfd-distribution
+#| eval: false
+# Code used to generate ../figures/BFD_distribution.png
+#
+# This code mirrors src/04_visualizations.R.
+
+if (file.exists("src/utils_paths.R")) {
+  source("src/utils_paths.R")
+} else if (file.exists("utils_paths.R")) {
+  source("utils_paths.R")
+} else {
+  stop("Could not find 'utils_paths.R'.")
+}
+
+PROC_DIR <- get_proc_dir()
+
+analysis_path <- file.path(PROC_DIR, "analysis_full.rds")
+if (!file.exists(analysis_path)) {
+  analysis_path_w1 <- file.path(PROC_DIR, "analysis_w01.rds")
+  if (file.exists(analysis_path_w1)) {
+    warning("analysis_full.rds not found, using analysis_w01.rds")
+    analysis_path <- analysis_path_w1
+  } else {
+    stop(paste(analysis_path, "not found. Run 02_compute_BFD.R first."))
+  }
+}
+
+df <- readRDS(analysis_path)
+
+if (all(c("pass_length", "targeted_position") %in% names(df))) {
+  message("Filtering visuals to WR/TE forward-pass targets for consistency with modeling...")
+  df <- df |>
+    dplyr::filter(
+      !is.na(pass_length),
+      pass_length > 0,
+      targeted_position %in% c("WR", "TE")
+    )
+}
+
+missing_BFD <- sum(is.na(df$BFD))
+if (missing_BFD > 0) {
+  message(sprintf(
+    "Note: Removing %d rows where BFD could not be calculated (likely due to missing defender tracking data in output).",
+    missing_BFD
+  ))
+  df <- df[!is.na(df$BFD), ]
+}
+
+FIG_DIR <- get_fig_dir()
+
+p1 <- plot_BFD_distribution(df)
+ggsave(file.path(FIG_DIR, "BFD_distribution.png"), p1, width = 8, height = 5)
+```
+
 ![Distribution of BFD](../figures/BFD_distribution.png)
 
 Across the 14,108 passing plays we studied, defenders usually start to close in on receivers once the ball is in the air, so the defenders gain yards with respect to the receiver when the ball is thrown, and the catch is complete/incomplete. The average Ball-Flight Differential (BFD) is -.82 yards, and the distribution is centered to the left of zero with a left skew (long left tail). This means that the deeper throws have defenders closing space toward the receiver who is stationed further down the field. Whereas a right-skewed tail means that the receivers are gaining yards against the defender. 
@@ -1675,8 +1730,30 @@ The negative mean baseline means that receivers gain positive yards against the 
 
 The mixed effects model shows how initial differential, air time, and context are all relevant to contributing to the BFD. 
 
+```{r}
+#| label: code-bfd-vs-airtime
+#| eval: false
+# Code used to generate ../figures/BFD_vs_airtime.png
+#
+# Assumes df and FIG_DIR have been created as in the code-bfd-distribution chunk above.
+
+p2 <- plot_BFD_vs_airtime(df)
+ggsave(file.path(FIG_DIR, "BFD_vs_airtime.png"), p2, width = 8, height = 5)
+```
+
 ![BFD vs Air Time](../figures/BFD_vs_airtime.png)
 Air Time shows that the longer the throw, the more separation is lost. The coefficient is approximately -0.09 (how when it is a positive linear line)and statistically significant with a p-value < .01. This means that adding half a second to a throw flight time costs about .045 yards of separation on average. Thus, the deeper balls give defenders more time to recover.
+
+```{r}
+#| label: code-bfd-vs-dthrow
+#| eval: false
+# Code used to generate ../figures/BFD_vs_dthrow.png
+#
+# Assumes df and FIG_DIR have been created as in the code-bfd-distribution chunk above.
+
+p3 <- plot_BFD_vs_throw_separation(df)
+ggsave(file.path(FIG_DIR, "BFD_vs_dthrow.png"), p3, width = 8, height = 5)
+```
 
 ![BFD vs Initial Differential](../figures/BFD_vs_dthrow.png)
 
@@ -1773,6 +1850,26 @@ We use this to find receivers who are more skilled at breaking open during mid-r
 The receivers at the top of this table show that they get open more often on average than NFL players usually do. A 5% markov lift signifies a player who finds space 5% more on average than the league average. Thus, this player circumvents the defender and wins leverage, which helps them show up open on the quarterback's perspective more than others. Even after accounting for randomness, limited snaps, route variation, etc., the receivers with high lifts are still above average. +0.19 percentage points above the league baseline average (1.49% per frame), i.e., Olave breaks open slightly more often than an average receiver in similar situations.
 
 Thus, receivers who run a lot of routes and typically create space have smaller intervals, so we are more confident in their high openness average. Then, the receivers with fewer routes or fewer roles can look fantastic, but their intervals are wide, which means more uncertainty about their performance being above average.
+
+```{r}
+#| label: code-markov-lift-bayes-intervals
+#| eval: false
+# Code used to generate ../figures/markov_lift_bayes_intervals.png
+#
+# Assumes get_proc_dir() and get_fig_dir() are available from utils_paths.R as shown earlier.
+
+PROC_DIR <- get_proc_dir()
+FIG_DIR <- get_fig_dir()
+
+bayes_markov_path <- file.path(PROC_DIR, "markov_lift_rankings_bayes.csv")
+if (file.exists(bayes_markov_path)) {
+  lift_bayes <- readr::read_csv(bayes_markov_path, show_col_types = FALSE)
+  p7 <- plot_bayesian_markov_intervals(lift_bayes, top_n = 15)
+  if (!is.null(p7)) {
+    ggsave(file.path(FIG_DIR, "markov_lift_bayes_intervals.png"), p7, width = 8, height = 6)
+  }
+}
+```
 
 ![Bayesian Markov Lift Intervals](../figures/markov_lift_bayes_intervals.png)
 
@@ -1871,6 +1968,26 @@ The receivers with large positive BFD Over Expected values meant that they consi
 Receivers with negative values rely on the timing and scheme, while somewhat struggling to keep leverage when the ball is released. They may be open at first, but do not sustain this openness throughout the throw in the air. These leaderboards are restricted to wide receivers and tight ends with at least 30 forward‑pass targets in the 2023 regular season so we have enough data to use for the receiver rankings. 
 
 For example, Chris Olave has an BFD Over Expected of about 0.15, with a narrower CI of -0.07 to 0.38. This means Olave is consistent by adding about a quarter yard of separation during the throw (after already accounting for route, defender, air in time, etc.). The narrower CI says that this separation is not due to noise of lucky plays, but rather that Olave is consistent. On the other hand, Kalif Raymond has an BFD Over Expected of about 0.24 and a wider CI of -0.03 to 0.58. While Raymond adds about half a yard of separation during the throw, which is better ball flight differential than Olave, we are not very confident that this is how he truly, consistently plays due to the wide CI. Thus, his BFD varies due to scheme, play, routes, mismatches of players, etc. There may be times when Raymond separates, versus times when he is not open at all. Overall, Olave shows a smaller, but more reliable pattern of separation, to frequently breaking open.
+
+```{r}
+#| label: code-bfd-bayes-intervals
+#| eval: false
+# Code used to generate ../figures/receiver_BFD_bayes_intervals.png
+#
+# Assumes get_proc_dir() and get_fig_dir() are available from utils_paths.R as shown earlier.
+
+PROC_DIR <- get_proc_dir()
+FIG_DIR <- get_fig_dir()
+
+bayes_BFD_path <- file.path(PROC_DIR, "receiver_rankings_bayes.csv")
+if (file.exists(bayes_BFD_path)) {
+  rankings_bayes <- readr::read_csv(bayes_BFD_path, show_col_types = FALSE)
+  p6 <- plot_bayesian_BFD_intervals(rankings_bayes, top_n = 15)
+  if (!is.null(p6)) {
+    ggsave(file.path(FIG_DIR, "receiver_BFD_bayes_intervals.png"), p6, width = 8, height = 6)
+  }
+}
+```
 
 ![Bayesian BFD Over Expected Intervals](../figures/receiver_BFD_bayes_intervals.png)
 
