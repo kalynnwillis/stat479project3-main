@@ -53,13 +53,6 @@ When controlling for other factors that influence ball-flight differential (defe
 To address our research questions, we use the Big Data Bowl 2026 tracking and play-level data that covers the 2023 NFL regular season (Weeks 1 - 18). The play-level data includes game context (down, distance, time, score), offensive/defensive descriptors, and event-level identifiers like catch or incompletion. In addition, the tracking data contains frame-level positions for all of the players and the ball at 10 Hz. The focus of our project is on tracking moments from the throw to the end of the play, so that we can analyze the receiver-defender interactions when a ball is thrown.
 
 ```{r}
-#| label: code-load-data
-#| eval: false
-# Exact code used to ingest weekly input/output CSVs from the Big Data Bowl.
-
-# 00_load_data.R
-
-
 library(tidyverse)
 library(readr)
 
@@ -72,7 +65,7 @@ if (dir.exists("data")) {
   DATA_DIR <- "data"
 }
 
-WEEKS <- sprintf("w%02d", 1:18) # Weeks w01 to w18
+WEEKS <- sprintf("w%02d", 1:18)
 
 load_week_data <- function(week) {
   input_file <- file.path(DATA_DIR, paste0("input_2023_", week, ".csv"))
@@ -121,12 +114,6 @@ To narrow down the data, we filter to only the plays with an identified targeted
 Our filtered dataset contains 14,108 passing plays, which each contain the receiver-defender separation at the throw and play end, the air time, and the contextual variables (down, score, routes run, etc.)
 
 ```{r}
-#| label: code-feature-engineering
-#| eval: false
-# Exact feature-engineering code used to construct play-level separation and trajectories.
-
-# 01_engineer_features.R
-
 library(tidyverse)
 identify_targeted_receiver <- function(play_data) {
   tr <- play_data |>
@@ -314,11 +301,9 @@ if (sys.nframe() == 0) {
 
     results <- build_play_feature_table(week_data_list)
 
-    #save Features
     feat_file <- file.path(OUT_DIR, paste0("play_features_", week, ".rds"))
     saveRDS(results$features, feat_file)
 
-    #save Trajectories
     traj_file <- file.path(OUT_DIR, paste0("separation_trajectories_", week, ".rds"))
     saveRDS(results$trajectories, traj_file)
 
@@ -340,16 +325,6 @@ $$
 This measures the difference in distance (in yards) between the targeted receiver and nearest defender at the time of the throw and the ball arrival (catch, pass breakup, or incompletion). Note that a positive BFD indicates the receiver gained separation from their nearest defender, while a negative BFD indicates the defender got closer. 
 
 ```{r}
-#| label: code-compute-BFD
-#| eval: false
-# Exact code used to compute BFD and join supplementary context.
-
-# 02_compute_BFD.R
-# Formula: BFD = d_catch - d_throw
-# Interpretation:
-#   Positive BFD -> Gained separation (Good for WR)
-#   Negative BFD -> Lost separation (Good for DB)
-
 library(tidyverse)
 
 compute_BFD <- function(play_features) {
@@ -475,19 +450,7 @@ This percentage measures if an individual receiver breaks open from often than t
 
 
 ```{r}
-#| label: code-markov-lift
-#| eval: false
-# Exact code used to build Markov transitions and Markov Lift.
-
-# 06_markov_separation.R
-
 library(tidyverse)
-
-# Define separation states (in yards)
-# S0: < 1 yard (Tight)
-# S1: 1-3 yards (Moderate)
-# S2: 3-5 yards (Open)
-# S3: > 5 yards (Wide Open)
 
 get_state <- function(sep) {
   case_when(
@@ -572,7 +535,7 @@ compute_markov_lift <- function(transitions, features_df) {
       successes = sum(next_state %in% good_ends),
       player_rate = successes / n_transitions
     ) |>
-    filter(n_transitions >= 50) |> # Minimum sample size
+    filter(n_transitions >= 50) |> 
     mutate(
       markov_lift = player_rate - league_rate
     ) |>
@@ -672,7 +635,6 @@ extract_bayesian_markov_lift <- function(bayes_model, break_df, league_rate) {
 }
 
 if (sys.nframe() == 0) {
-  # Source path helpers
   if (file.exists("src/utils_paths.R")) {
     source("src/utils_paths.R")
   } else if (file.exists("utils_paths.R")) {
@@ -788,23 +750,11 @@ We also know there will be uncertainty in our estimates, so we fit a Bayesian an
 Model diagnostics (fitted vs. observed BFD and residual distributions) are used to assess linearity, variance assumptions, and the contribution of random effects.
 
 ```{r}
-#| label: code-mixed-effects
-#| eval: false
-# Exact code used for mixed-effects and Bayesian BFD over expected models.
-
-# 03_models.R
-
 library(tidyverse)
 library(lme4)
 library(broom.mixed) 
 
 fit_mixed_effects_model <- function(data) {
-  # Model BFD controlling for:
-  # - Air Time (longer throws allow more convergence)
-  # - Initial Differential (regression to the mean)
-  # - Route / coverage context and defensive structure
-  # - Random Effect: Receiver ID (The metric we want)
-  # - Random Effect: Game ID (Game-specific conditions/weather)
 
   m <- lmer(
     BFD ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +
@@ -973,7 +923,7 @@ if (sys.nframe() == 0) {
 
   df_model <- df_filtered |>
     drop_na(BFD, air_time, d_throw, targeted_id, pass_length, defenders_in_the_box) |>
-    filter(air_time >= 0) |> # Allow 0 air time? No, but >= just in case floating point issues
+    filter(air_time >= 0) |>
     mutate(
       targeted_id = as.factor(targeted_id),
       game_id = as.factor(game_id),
@@ -984,7 +934,6 @@ if (sys.nframe() == 0) {
       defenders_in_the_box_scaled = scale(defenders_in_the_box)[, 1]
     )
 
-  #Fit Model
   mem_model <- fit_mixed_effects_model(df_model)
 
   if (lme4::isSingular(mem_model)) {
@@ -993,7 +942,7 @@ if (sys.nframe() == 0) {
 
   print(summary(mem_model))
 
-  #Model validation metrics
+  # Validate model
   y_obs <- df_model$BFD
   y_hat <- fitted(mem_model)
   resid <- y_obs - y_hat
@@ -1110,12 +1059,6 @@ While the mixed‑effects model attributes skill to receivers, we also ask: give
 We trained the model on 80% of the randomly sampled plays in our dataset and reserved the remaining 20% as a test set to evaluate predictive performance. We use Root Mean Squared Error in yards to evaluate the performance.
 
 ```{r}
-#| label: code-xgboost
-#| eval: false
-# Exact code used to train the XGBoost model for final separation.
-
-# 07_ml_models.R
-
 library(tidyverse)
 set.seed(123)
 if (!requireNamespace("xgboost", quietly = TRUE) ||
@@ -1147,9 +1090,7 @@ prepare_ml_data <- function(analysis_df) {
 
   ml_df <- analysis_df |>
     select(all_of(available)) |>
-    # Ensure target is present
     filter(!is.na(d_catch), !is.na(d_throw), !is.na(air_time)) |>
-    # Handle categorical predictors as factors with explicit 'Unknown' level
     mutate(
       across(
         where(is.character),
@@ -1289,14 +1230,11 @@ if (sys.nframe() == 0) {
 }
 ```
 
-### Reproducible Pipeline
+### Reproduciblity
 
-All intermediate data products and model outputs flow through a scripted R pipeline. For reproducibility, the main steps are:
+To reproduce:
 
 ```{r}
-#| label: full-pipeline
-#| eval: false
-
 # 1) Feature engineering and separation trajectories for each week
 source("src/01_engineer_features.R")
 
@@ -1347,19 +1285,15 @@ get_fig_dir <- function() {
 ### Separation Dynamics (BFD)
 
 ```{r}
-#| label: code-bfd-distribution
-#| eval: false
 plot_BFD_distribution <- function(data) {
   ggplot(data, aes(x = BFD)) +
-    geom_histogram(binwidth = 0.5, fill = "#0072B2", color = "white", alpha = 0.8) +
+    geom_histogram(binwidth = 0.5, fill = "blue", color = "white", alpha = 0.8) +
     geom_vline(xintercept = 0, linetype = "dashed", color = "red", linewidth = 1) +
     theme_minimal() +
     labs(
-      title = "Distribution of Ball-Flight Differential added (BFD)",
-      subtitle = "Full Data Analysis",
-      x = "BFD (Yards Gained/Lost)",
-      y = "Number of Plays",
-      caption = "Positive BFD = Separation Gained, Negative BFD = Separation Lost"
+      title = "Distribution: Ball-Flight Differential added (BFD)",
+      x = "BFD (Yards)",
+      y = "Number of Plays"
     )
 }
 
@@ -1379,16 +1313,13 @@ The negative mean baseline means that receivers gain positive yards against the 
 The mixed effects model shows how initial differential, air time, and context are all relevant to contributing to the BFD. 
 
 ```{r}
-#| label: code-bfd-vs-airtime
-#| eval: false
 plot_BFD_vs_airtime <- function(data) {
   ggplot(data, aes(x = air_time, y = BFD)) +
-    geom_point(alpha = 0.5, color = "#D55E00") +
+    geom_point(alpha = 0.5, color = "orange") +
     geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") +
     theme_minimal() +
     labs(
       title = "BFD vs. Air Time",
-      subtitle = "Longer throws give defenders more time to close in",
       x = "Air Time (seconds)",
       y = "BFD (Yards)"
     )
@@ -1402,16 +1333,13 @@ ggsave(file.path(FIG_DIR, "BFD_vs_airtime.png"), p2, width = 8, height = 5)
 Air Time shows that the longer the throw, the more separation is lost. The coefficient is approximately -0.09 (how when it is a positive linear line)and statistically significant with a p-value < .01. This means that adding half a second to a throw flight time costs about .045 yards of separation on average. Thus, the deeper balls give defenders more time to recover.
 
 ```{r}
-#| label: code-bfd-vs-dthrow
-#| eval: false
-plot_BFD_vs_throw_separation <- function(data) {
+  plot_BFD_vs_throw_separation <- function(data) {
   ggplot(data, aes(x = d_throw, y = BFD)) +
-    geom_point(alpha = 0.5, color = "#009E73") +
+    geom_point(alpha = 0.5, color = "aquamarine3") +
     geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") +
     theme_minimal() +
     labs(
-      title = "BFD vs. Initial Differential at Throw",
-      subtitle = "Regression to the mean: Open receivers tend to lose separation",
+      title = "BFD vs. Initial Differential (at Throw)",
       x = "Separation at Throw (Yards)",
       y = "BFD (Yards)"
     )
@@ -1426,8 +1354,6 @@ ggsave(file.path(FIG_DIR, "BFD_vs_dthrow.png"), p3, width = 8, height = 5)
 Initial Differential shows that extreme situations move back toward normal by the time the ball arrives, as the coefficient is -0.39 which is statistically significant with a p-value < .01. Routes open at the throw basically, extreme situations tend to move back toward “normal” by the time the ball arrives. For every extra yard of openness when the ball is thrown, the receiver loses about 0.39 yards of advantage by the time the ball throw is completed.
 
 ```{r}
-#| label: code-mixed-effects-figures
-#| eval: false
 library(ggplot2)
 
 p_fit <- ggplot(diag_df, aes(x = fitted, y = BFD)) +
