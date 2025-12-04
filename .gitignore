@@ -19,3 +19,11 @@ processed/markov_lift_metrics.csv
 processed/markov_lift_model.rds
 processed/mixed_effects_model_bayes.rds
 processed/play_features_w*.rds
+src/figures
+figures/
+processed/
+figures/*.png
+processed/*.rds
+processed/*.csv
+report/*.html
+report/*_files/
