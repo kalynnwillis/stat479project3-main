@@ -459,7 +459,7 @@ get_state <- function(sep) {
   )
 }
 
-STATE_LEVELS <- c("_Tight", "S1_Moderate", "S2_Open", "S3_WideOpen")
+STATE_LEVELS <- c("S0_Tight", "S1_Moderate", "S2_Open", "S3_WideOpen")
 
 load_trajectories <- function(proc_dir = "processed") {
   files <- list.files(proc_dir, pattern = "separation_trajectories_w[0-9]+\\.rds", full.names = TRUE)
@@ -514,7 +514,7 @@ plot_transition_matrix <- function(trans_probs) {
 
 compute_markov_lift <- function(transitions, features_df) {
 
-  relevant_starts <- c("_Tight", "S1_Moderate")
+  relevant_starts <- c("S0_Tight", "S1_Moderate")
   good_ends <- c("S2_Open", "S3_WideOpen")
   league_rate <- transitions |>
     filter(state %in% relevant_starts) |>

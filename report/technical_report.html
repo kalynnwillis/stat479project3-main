@@ -579,7 +579,7 @@ p^{\text{league}}_{\text{break}} = P(S_{t+1} \in \{2,3\} \mid S_t \in \{0,1\})
 <span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>STATE_LEVELS <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"_Tight"</span>, <span class="st">"S1_Moderate"</span>, <span class="st">"S2_Open"</span>, <span class="st">"S3_WideOpen"</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>STATE_LEVELS <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"S0_Tight"</span>, <span class="st">"S1_Moderate"</span>, <span class="st">"S2_Open"</span>, <span class="st">"S3_WideOpen"</span>)</span>
 <span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>load_trajectories <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">proc_dir =</span> <span class="st">"processed"</span>) {</span>
 <span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  files <span class="ot">&lt;-</span> <span class="fu">list.files</span>(proc_dir, <span class="at">pattern =</span> <span class="st">"separation_trajectories_w[0-9]+</span><span class="sc">\\</span><span class="st">.rds"</span>, <span class="at">full.names =</span> <span class="cn">TRUE</span>)</span>
@@ -634,7 +634,7 @@ p^{\text{league}}_{\text{break}} = P(S_{t+1} \in \{2,3\} \mid S_t \in \{0,1\})
 <span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>compute_markov_lift <span class="ot">&lt;-</span> <span class="cf">function</span>(transitions, features_df) {</span>
 <span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>  relevant_starts <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"_Tight"</span>, <span class="st">"S1_Moderate"</span>)</span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>  relevant_starts <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"S0_Tight"</span>, <span class="st">"S1_Moderate"</span>)</span>
 <span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>  good_ends <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"S2_Open"</span>, <span class="st">"S3_WideOpen"</span>)</span>
 <span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>  league_rate <span class="ot">&lt;-</span> transitions <span class="sc">|&gt;</span></span>
 <span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(state <span class="sc">%in%</span> relevant_starts) <span class="sc">|&gt;</span></span>
