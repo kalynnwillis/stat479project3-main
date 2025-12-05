@@ -543,7 +543,7 @@ compute_markov_lift <- function(transitions, features_df) {
 }
 
 compute_break_counts <- function(transitions, features_df, min_transitions = 50) {
-  relevant_starts <- c("_Tight", "S1_Moderate")
+  relevant_starts <- c("S0_Tight", "S1_Moderate")
   good_ends <- c("S2_Open", "S3_WideOpen")
 
   league_rate <- transitions |>
@@ -1251,11 +1251,19 @@ get_fig_dir <- function() {
 }
 ```
 
+```{r}
+# Global paths/data for report figures
+PROC_DIR <- get_proc_dir()
+FIG_DIR  <- get_fig_dir()
+
+df <- readRDS(file.path(PROC_DIR, "analysis_full.rds"))
+```
+
 ## Results
 
 ### Separation Dynamics (BFD)
 
-```{r}
+```{r, eval=FALSE}
 plot_BFD_distribution <- function(data) {
   ggplot(data, aes(x = BFD)) +
     geom_histogram(binwidth = 0.5, fill = "blue", color = "white", alpha = 0.8) +
@@ -1282,7 +1290,7 @@ From a football perspective, this negative baseline matters because if most play
 
 The mixed effects model shows how initial differential, air time, and context are all relevant to contributing to the BFD. 
 
-```{r}
+```{r, eval=FALSE}
 plot_BFD_vs_airtime <- function(data) {
   ggplot(data, aes(x = air_time, y = BFD)) +
     geom_point(alpha = 0.5, color = "orange") +
@@ -1303,7 +1311,7 @@ ggsave(file.path(FIG_DIR, "BFD_vs_airtime.png"), p2, width = 8, height = 5)
 
 Air Time shows that the longer the throw, the more separation is lost. The coefficient is approximately -0.09 and statistically significant with a p-value < .01. This means that adding half a second to a throw flight time costs about .045 yards of separation on average. Thus, the deeper balls give defenders more time to recover.
 
-```{r}
+```{r, eval=FALSE}
 plot_BFD_vs_throw_separation <- function(data) {
   ggplot(data, aes(x = d_throw, y = BFD)) +
     geom_point(alpha = 0.5, color = "aquamarine3") +
@@ -1324,7 +1332,7 @@ ggsave(file.path(FIG_DIR, "BFD_vs_dthrow.png"), p3, width = 8, height = 5)
 
 Initial Differential shows that extreme situations move back toward normal by the time the ball arrives, as the coefficient is -0.39 which is statistically significant with a p-value < .01. For every extra yard of openness when the ball is thrown, the receiver loses about 0.39 yards of advantage by the time the ball throw is completed. Routes open at the throw and extreme situations tend to move back toward “normal” by the time the ball arrives. 
 
-```{r}
+```{r, eval=FALSE}
 library(ggplot2)
 
 p_fit <- ggplot(diag_df, aes(x = fitted, y = BFD)) +
@@ -1368,7 +1376,7 @@ The air time, initial differential, and covariates explain a meaningful part of 
 
 ### Markov Chain 
 
-```{r}
+```{r, eval=FALSE}
 plot_transition_matrix <- function(trans_probs) {
   ggplot(trans_probs, aes(x = next_state, y = fct_rev(state), fill = prob)) +
     geom_tile() +
@@ -1392,7 +1400,7 @@ ggsave(file.path(FIG_DIR, "markov_transitions.png"), p, width = 8, height = 6)
 
 **Top Receivers by Markov Lift**:
 
-```{r}
+```{r, eval=FALSE}
 library(tidyverse)
 library(knitr)
 
@@ -1425,7 +1433,7 @@ if (file.exists(lift_path)) {
 }
 ```
 
-```{r}
+```{r, eval=FALSE}
 
 if (file.exists(lift_bayes_path)) {
   lift_bayes <- read_csv(lift_bayes_path) |>
@@ -1468,7 +1476,7 @@ The receivers at the top of this table show that they get open more often than N
 
 Thus, receivers who run a lot of routes and typically create space have smaller intervals, so we are more confident in their high openness average. Alternatively, the receivers with fewer routes or fewer roles can look fantastic, but their intervals are wide, which means we have more uncertainty about their performance being above average.
 
-```{r}
+```{r, eval=FALSE}
 plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
   if (!"player_rate_mean" %in% names(lift_bayes)) {
     return(NULL)
@@ -1540,7 +1548,7 @@ On the held‑out test set, the model attains an RMSE of **1.79 yards**, meaning
 
 Overall, the model's scores to determine the signficance of various features shows that Initial Differential is most predictive, then Air Time follows suit. While there are other features that help explain and predict the results, they are not as impactful to the model. Below, we can see the predicted versus observed plot to show how the points have moderate variance:
 
-```{r}
+```{r, eval=FALSE}
 p_pred <- ggplot(res$test_diag, aes(x = pred, y = obs)) +
   geom_point(alpha = 0.3, color = "darkolivegreen4") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
@@ -1564,7 +1572,7 @@ ggplot2::ggsave(
 
 ### Top Receivers (Ball-Flight Differential Over Expected)
 
-```{r}
+```{r, eval=FALSE}
 rankings_path <- "../processed/receiver_rankings.csv"
 if(file.exists(rankings_path)) {
   rankings <- read_csv(rankings_path)
@@ -1596,7 +1604,7 @@ if(file.exists(rankings_path)) {
 }
 ```
 
-```{r}
+```{r, eval=FALSE}
 rankings_bayes_path <- "../processed/receiver_rankings_bayes.csv"
 if (file.exists(rankings_bayes_path)) {
   rankings_bayes <- read_csv(rankings_bayes_path)
