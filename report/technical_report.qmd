@@ -53,13 +53,6 @@ When controlling for other factors that influence ball-flight differential (defe
 To address our research questions, we use the Big Data Bowl 2026 tracking and play-level data that covers the 2023 NFL regular season (Weeks 1 - 18). The play-level data includes game context (down, distance, time, score), offensive/defensive descriptors, and event-level identifiers like catch or incompletion. In addition, the tracking data contains frame-level positions for all of the players and the ball at 10 Hz. The focus of our project is on tracking moments from the throw to the end of the play, so that we can analyze the receiver-defender interactions when a ball is thrown.
 
 ```{r}
-#| label: code-load-data
-#| eval: false
-# Exact code used to ingest weekly input/output CSVs from the Big Data Bowl.
-
-# 00_load_data.R
-
-
 library(tidyverse)
 library(readr)
 
@@ -72,7 +65,7 @@ if (dir.exists("data")) {
   DATA_DIR <- "data"
 }
 
-WEEKS <- sprintf("w%02d", 1:18) # Weeks w01 to w18
+WEEKS <- sprintf("w%02d", 1:18) 
 
 load_week_data <- function(week) {
   input_file <- file.path(DATA_DIR, paste0("input_2023_", week, ".csv"))
@@ -121,12 +114,6 @@ To narrow down the data, we filter to only the plays with an identified targeted
 Our filtered dataset contains 14,108 passing plays, which each contain the receiver-defender separation at the throw and play end, the air time, and the contextual variables (down, score, routes run, etc.)
 
 ```{r}
-#| label: code-feature-engineering
-#| eval: false
-# Exact feature-engineering code used to construct play-level separation and trajectories.
-
-# 01_engineer_features.R
-
 library(tidyverse)
 identify_targeted_receiver <- function(play_data) {
   tr <- play_data |>
@@ -215,10 +202,9 @@ compute_play_separation <- function(gid, pid, input_df, output_df) {
 
   d_catch <- calculate_separation(rec_catch, defs_catch)
 
-  # Assume 10 Hz frame rate
-  air_time <- (catch_frame - first_out_frame) * 0.1
+air_time <- (catch_frame - first_out_frame) * 0.1
 
-  #Compute Separation Trajectory
+  #Separation Computed
 
   frames <- unique(rec_out$frame_id)
 
@@ -313,11 +299,9 @@ if (sys.nframe() == 0) {
 
     results <- build_play_feature_table(week_data_list)
 
-    #save Features
     feat_file <- file.path(OUT_DIR, paste0("play_features_", week, ".rds"))
     saveRDS(results$features, feat_file)
 
-    #save Trajectories
     traj_file <- file.path(OUT_DIR, paste0("separation_trajectories_", week, ".rds"))
     saveRDS(results$trajectories, traj_file)
 
@@ -339,16 +323,6 @@ $$
 This measures the difference in distance (in yards) between the targeted receiver and nearest defender at the time of the throw and the ball arrival (catch, pass breakup, or incompletion). Note that a positive BFD indicates the receiver gained separation from their nearest defender, while a negative BFD indicates the defender got closer. 
 
 ```{r}
-#| label: code-compute-BFD
-#| eval: false
-# Exact code used to compute BFD and join supplementary context.
-
-# 02_compute_BFD.R
-# Formula: BFD = d_catch - d_throw
-# Interpretation:
-#   Positive BFD -> Gained separation (Good for WR)
-#   Negative BFD -> Lost separation (Good for DB)
-
 library(tidyverse)
 
 compute_BFD <- function(play_features) {
@@ -474,19 +448,7 @@ This percentage measures if an individual receiver breaks open from often than t
 
 
 ```{r}
-#| label: code-markov-lift
-#| eval: false
-# Exact code used to build Markov transitions and Markov Lift.
-
-# 06_markov_separation.R
-
 library(tidyverse)
-
-# Define separation states (in yards)
-# S0: < 1 yard (Tight)
-# S1: 1-3 yards (Moderate)
-# S2: 3-5 yards (Open)
-# S3: > 5 yards (Wide Open)
 
 get_state <- function(sep) {
   case_when(
@@ -497,7 +459,7 @@ get_state <- function(sep) {
   )
 }
 
-STATE_LEVELS <- c("S0_Tight", "S1_Moderate", "S2_Open", "S3_WideOpen")
+STATE_LEVELS <- c("_Tight", "S1_Moderate", "S2_Open", "S3_WideOpen")
 
 load_trajectories <- function(proc_dir = "processed") {
   files <- list.files(proc_dir, pattern = "separation_trajectories_w[0-9]+\\.rds", full.names = TRUE)
@@ -552,7 +514,7 @@ plot_transition_matrix <- function(trans_probs) {
 
 compute_markov_lift <- function(transitions, features_df) {
 
-  relevant_starts <- c("S0_Tight", "S1_Moderate")
+  relevant_starts <- c("_Tight", "S1_Moderate")
   good_ends <- c("S2_Open", "S3_WideOpen")
   league_rate <- transitions |>
     filter(state %in% relevant_starts) |>
@@ -571,7 +533,7 @@ compute_markov_lift <- function(transitions, features_df) {
       successes = sum(next_state %in% good_ends),
       player_rate = successes / n_transitions
     ) |>
-    filter(n_transitions >= 50) |> # Minimum sample size
+    filter(n_transitions >= 50) |>
     mutate(
       markov_lift = player_rate - league_rate
     ) |>
@@ -581,7 +543,7 @@ compute_markov_lift <- function(transitions, features_df) {
 }
 
 compute_break_counts <- function(transitions, features_df, min_transitions = 50) {
-  relevant_starts <- c("S0_Tight", "S1_Moderate")
+  relevant_starts <- c("_Tight", "S1_Moderate")
   good_ends <- c("S2_Open", "S3_WideOpen")
 
   league_rate <- transitions |>
@@ -671,7 +633,6 @@ extract_bayesian_markov_lift <- function(bayes_model, break_df, league_rate) {
 }
 
 if (sys.nframe() == 0) {
-  # Source path helpers
   if (file.exists("src/utils_paths.R")) {
     source("src/utils_paths.R")
   } else if (file.exists("utils_paths.R")) {
@@ -787,24 +748,11 @@ We also know there will be uncertainty in our estimates, so we fit a Bayesian an
 Model diagnostics (fitted vs. observed BFD and residual distributions) are used to assess linearity, variance assumptions, and the contribution of random effects.
 
 ```{r}
-#| label: code-mixed-effects
-#| eval: false
-# Exact code used for mixed-effects and Bayesian BFD over expected models.
-
-# 03_models.R
-
 library(tidyverse)
 library(lme4)
 library(broom.mixed) 
 
 fit_mixed_effects_model <- function(data) {
-  # Model BFD controlling for:
-  # - Air Time (longer throws allow more convergence)
-  # - Initial Differential (regression to the mean)
-  # - Route / coverage context and defensive structure
-  # - Random Effect: Receiver ID (The metric we want)
-  # - Random Effect: Game ID (Game-specific conditions/weather)
-
   m <- lmer(
     BFD ~ air_time_scaled + d_throw_scaled + pass_length_scaled + defenders_in_the_box_scaled +
       team_coverage_man_zone + route_of_targeted_receiver + targeted_position +
@@ -909,7 +857,6 @@ extract_bayesian_receiver_rankings <- function(bayes_model) {
 }
 
 if (sys.nframe() == 0) {
-  # Source path helpers
   if (file.exists("src/utils_paths.R")) {
     source("src/utils_paths.R")
   } else if (file.exists("utils_paths.R")) {
@@ -983,7 +930,7 @@ if (sys.nframe() == 0) {
       defenders_in_the_box_scaled = scale(defenders_in_the_box)[, 1]
     )
 
-  #Fit Model
+  # Fit
   mem_model <- fit_mixed_effects_model(df_model)
 
   if (lme4::isSingular(mem_model)) {
@@ -1109,12 +1056,6 @@ While the mixed‑effects model attributes skill to receivers, we also ask: give
 We trained the model on 80% of the randomly sampled plays in our dataset and reserved the remaining 20% as a test set to evaluate predictive performance. We use Root Mean Squared Error in yards to evaluate the performance.
 
 ```{r}
-#| label: code-xgboost
-#| eval: false
-# Exact code used to train the XGBoost model for final separation.
-
-# 07_ml_models.R
-
 library(tidyverse)
 set.seed(123)
 if (!requireNamespace("xgboost", quietly = TRUE) ||
@@ -1125,7 +1066,7 @@ if (!requireNamespace("xgboost", quietly = TRUE) ||
 prepare_ml_data <- function(analysis_df) {
 
   desired_cols <- c(
-    "d_catch", # target
+    "d_catch", 
     "d_throw",
     "air_time",
     "pass_length",
@@ -1146,9 +1087,7 @@ prepare_ml_data <- function(analysis_df) {
 
   ml_df <- analysis_df |>
     select(all_of(available)) |>
-    # Ensure target is present
     filter(!is.na(d_catch), !is.na(d_throw), !is.na(air_time)) |>
-    # Handle categorical predictors as factors with explicit 'Unknown' level
     mutate(
       across(
         where(is.character),
@@ -1290,12 +1229,6 @@ if (sys.nframe() == 0) {
 
 
 ```{r}
-#| label: code-utils-paths
-#| eval: false
-# Helper used throughout the pipeline to resolve processed/figures directories.
-
-## utils_paths.R
-
 get_proc_dir <- function() {
     if (dir.exists("processed")) {
         return("processed")
@@ -1323,17 +1256,14 @@ get_fig_dir <- function() {
 ### Separation Dynamics (BFD)
 
 ```{r}
-#| label: code-bfd-distribution
-#| eval: false
 plot_BFD_distribution <- function(data) {
   ggplot(data, aes(x = BFD)) +
-    geom_histogram(binwidth = 0.5, fill = "#0072B2", color = "white", alpha = 0.8) +
+    geom_histogram(binwidth = 0.5, fill = "blue", color = "white", alpha = 0.8) +
     geom_vline(xintercept = 0, linetype = "dashed", color = "red", linewidth = 1) +
     theme_minimal() +
     labs(
-      title = "Distribution of Ball-Flight Differential added (BFD)",
-      subtitle = "Full Data Analysis",
-      x = "BFD (Yards Gained/Lost)",
+      title = "Distribution: Ball-Flight Differential added (BFD)",
+      x = "BFD (Yards)",
       y = "Number of Plays",
       caption = "Positive BFD = Separation Gained, Negative BFD = Separation Lost"
     )
@@ -1344,27 +1274,22 @@ ggsave(file.path(FIG_DIR, "BFD_distribution.png"), p1, width = 8, height = 5)
 ```
 
 ![Distribution of BFD](../figures/BFD_distribution.png)
+Across the 14,108 passing plays we studied, receivers generally lose separation once the ball is in the air, meaning defenders begin to close space during ball flight. This produces an average Ball-Flight Differential (BFD) of –0.82 yards, with the distribution centered slightly below zero and a long left tail. Most plays cluster around 0, where the defender and receiver maintain roughly the same cushion while the ball is traveling. The long left tail reflects the plays with deeper routes, where defenders close a large amount of space. The smaller right tail represents plays where receivers gain separation in the air through speed, leverage, route, etc.
 
-Across the 14,108 passing plays we studied, defenders usually start to close in on receivers once the ball is in the air, so the defenders gain yards with respect to the receiver when the ball is thrown, and the catch is complete/incomplete. The average Ball-Flight Differential (BFD) is -.82 yards, and the distribution is centered to the left of zero with a left skew (long left tail). This means that the deeper throws have defenders closing space toward the receiver who is stationed further down the field. Whereas a right-skewed tail means that the receivers are gaining yards against the defender. 
-
-The negative mean baseline means that receivers gain positive yards against the defender; it means they are skilled. Most plays stay around 0, meaning that the routes the receiver and defender hold about the same cushion around the ball in the air. The snaps show little to no separation loss, which aligns with the defenders' tighter coverage on deeper routes, allowing them to close space. A smaller right tail means that receivers create separation in the air with route and speed. 
-
+From a football perspective, this negative baseline matters because if most plays involve separation loss, then simply maintaining separation and even slightly increasing separation is a sign of receiver skill. This also shows why looking only at separation at the catch can be misleading; some receivers routinely fight back to neutral or positive BFD despite starting in challenging positions.
 
 ### Drivers of Ball-Flight Differential 
 
 The mixed effects model shows how initial differential, air time, and context are all relevant to contributing to the BFD. 
 
 ```{r}
-#| label: code-bfd-vs-airtime
-#| eval: false
 plot_BFD_vs_airtime <- function(data) {
   ggplot(data, aes(x = air_time, y = BFD)) +
-    geom_point(alpha = 0.5, color = "#D55E00") +
+    geom_point(alpha = 0.5, color = "orange") +
     geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") +
     theme_minimal() +
     labs(
       title = "BFD vs. Air Time",
-      subtitle = "Longer throws give defenders more time to close in",
       x = "Air Time (seconds)",
       y = "BFD (Yards)"
     )
@@ -1375,20 +1300,18 @@ ggsave(file.path(FIG_DIR, "BFD_vs_airtime.png"), p2, width = 8, height = 5)
 ```
 
 ![BFD vs Air Time](../figures/BFD_vs_airtime.png)
-Air Time shows that the longer the throw, the more separation is lost. The coefficient is approximately -0.09 (how when it is a positive linear line)and statistically significant with a p-value < .01. This means that adding half a second to a throw flight time costs about .045 yards of separation on average. Thus, the deeper balls give defenders more time to recover.
+
+Air Time shows that the longer the throw, the more separation is lost. The coefficient is approximately -0.09 and statistically significant with a p-value < .01. This means that adding half a second to a throw flight time costs about .045 yards of separation on average. Thus, the deeper balls give defenders more time to recover.
 
 ```{r}
-#| label: code-bfd-vs-dthrow
-#| eval: false
 plot_BFD_vs_throw_separation <- function(data) {
   ggplot(data, aes(x = d_throw, y = BFD)) +
-    geom_point(alpha = 0.5, color = "#009E73") +
+    geom_point(alpha = 0.5, color = "aquamarine3") +
     geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") +
     theme_minimal() +
     labs(
       title = "BFD vs. Initial Differential at Throw",
-      subtitle = "Regression to the mean: Open receivers tend to lose separation",
-      x = "Separation at Throw (Yards)",
+      x = "Throw Separation (Yards)",
       y = "BFD (Yards)"
     )
 }
@@ -1399,19 +1322,17 @@ ggsave(file.path(FIG_DIR, "BFD_vs_dthrow.png"), p3, width = 8, height = 5)
 
 ![BFD vs Initial Differential](../figures/BFD_vs_dthrow.png)
 
-Initial Differential shows that extreme situations move back toward normal by the time the ball arrives, as the coefficient is -0.39 which is statistically significant with a p-value < .01. Routes open at the throw basically, extreme situations tend to move back toward “normal” by the time the ball arrives. For every extra yard of openness when the ball is thrown, the receiver loses about 0.39 yards of advantage by the time the ball throw is completed.
+Initial Differential shows that extreme situations move back toward normal by the time the ball arrives, as the coefficient is -0.39 which is statistically significant with a p-value < .01. For every extra yard of openness when the ball is thrown, the receiver loses about 0.39 yards of advantage by the time the ball throw is completed. Routes open at the throw and extreme situations tend to move back toward “normal” by the time the ball arrives. 
 
 ```{r}
-#| label: code-mixed-effects-figures
-#| eval: false
 library(ggplot2)
 
 p_fit <- ggplot(diag_df, aes(x = fitted, y = BFD)) +
-  geom_point(alpha = 0.3, color = "#0072B2") +
+  geom_point(alpha = 0.3, color = "cornflowerblue") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   theme_minimal() +
   labs(
-    title = "Mixed-Effects Model: Fitted vs Observed BFD",
+    title = "Mixed-Effects Model of Fitted vs Observed BFD",
     x = "Fitted BFD",
     y = "Observed BFD"
   )
@@ -1422,7 +1343,7 @@ ggsave(
   width = 8, height = 5, dpi = 300)
 
 p_resid <- ggplot(diag_df, aes(x = resid)) +
-  geom_histogram(bins = 40, fill = "#D55E00", color = "white", alpha = 0.8) +
+  geom_histogram(bins = 40, fill = "chocolate2", color = "white", alpha = 0.8) +
   theme_minimal() +
   labs(
     title = "Mixed-Effects Model Residuals (BFD)",
@@ -1448,17 +1369,14 @@ The air time, initial differential, and covariates explain a meaningful part of 
 ### Markov Chain 
 
 ```{r}
-#| label: code-markov-transitions
-#| eval: false
 plot_transition_matrix <- function(trans_probs) {
   ggplot(trans_probs, aes(x = next_state, y = fct_rev(state), fill = prob)) +
     geom_tile() +
     geom_text(aes(label = round(prob, 2)), color = "white") +
-    scale_fill_gradient(low = "navy", high = "red") +
+    scale_fill_gradient(low = "blue4", high = "red") +
     theme_minimal() +
     labs(
-      title = "Separation State Transition Probabilities",
-      subtitle = "Probability of moving from State Y to State X in next frame",
+      title = "Transition Probabilities between Separation States",
       x = "Next State",
       y = "Current State",
       fill = "Probability"
@@ -1475,7 +1393,6 @@ ggsave(file.path(FIG_DIR, "markov_transitions.png"), p, width = 8, height = 6)
 **Top Receivers by Markov Lift**:
 
 ```{r}
-#| label: load-markov-rankings
 library(tidyverse)
 library(knitr)
 
@@ -1543,17 +1460,15 @@ if (file.exists(lift_bayes_path)) {
 }
 ```
 
-This matrix shows how various states remain similar when moving onto the next frame, like for S3 Wide Open versus S2 Open. 
+This matrix shows how various states remain similar when moving onto the next frame, like S3 (Wide Open) versus S2 (Open). 
 
 We use this to find receivers who are more skilled at breaking open during mid-route. The Markov Lift shows the difference between the league average and the player’s break-open probability. Thus, we can interpret big, positive Markov Lift numbers as the ability to make tight coverage into open windows more often than we would expect across many games. 
 
-The receivers at the top of this table show that they get open more often on average than NFL players usually do. A 5% markov lift signifies a player who finds space 5% more on average than the league average. Thus, this player circumvents the defender and wins leverage, which helps them show up open on the quarterback's perspective more than others. Even after accounting for randomness, limited snaps, route variation, etc., the receivers with high lifts are still above average. +0.19 percentage points above the league baseline average (1.49% per frame), i.e., Olave breaks open slightly more often than an average receiver in similar situations.
+The receivers at the top of this table show that they get open more often than NFL players usually do on average. A 5% markov lift signifies a player who finds space 5% more on average than the league average. Thus, this player circumvents the defender and wins leverage, which helps them show up open on the quarterback's perspective more than others. Even after accounting for randomness, limited snaps, route variation, etc., the receivers with high lifts are still above average. With +0.19 percentage points above the league baseline average (1.49% per frame), Olave breaks open slightly more often than an average receiver in similar situations.
 
-Thus, receivers who run a lot of routes and typically create space have smaller intervals, so we are more confident in their high openness average. Then, the receivers with fewer routes or fewer roles can look fantastic, but their intervals are wide, which means more uncertainty about their performance being above average.
+Thus, receivers who run a lot of routes and typically create space have smaller intervals, so we are more confident in their high openness average. Alternatively, the receivers with fewer routes or fewer roles can look fantastic, but their intervals are wide, which means we have more uncertainty about their performance being above average.
 
 ```{r}
-#| label: code-markov-lift-bayes-intervals
-#| eval: false
 plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
   if (!"player_rate_mean" %in% names(lift_bayes)) {
     return(NULL)
@@ -1584,7 +1499,7 @@ plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
       player_rate_pct = player_rate_mean
     ) |>
     ggplot(aes(x = label, y = player_rate_pct)) +
-    geom_point(color = "#D55E00") +
+    geom_point(color = "chocolate2") +
     geom_errorbar(
       aes(
         ymin = player_rate_lower,
@@ -1596,7 +1511,6 @@ plot_bayesian_markov_intervals <- function(lift_bayes, top_n = 15) {
     theme_minimal() +
     labs(
       title = "Top Receivers by Break-Open Rate (Bayesian Markov Lift)",
-      subtitle = "Per-frame break-open probability with 95% credible intervals",
       x = "Receiver",
       y = "Break-Open Probability (%)"
     )
@@ -1627,10 +1541,8 @@ On the held‑out test set, the model attains an RMSE of **1.79 yards**, meaning
 Overall, the model's scores to determine the signficance of various features shows that Initial Differential is most predictive, then Air Time follows suit. While there are other features that help explain and predict the results, they are not as impactful to the model. Below, we can see the predicted versus observed plot to show how the points have moderate variance:
 
 ```{r}
-#| label: code-xgboost-pred-vs-observed
-#| eval: false
 p_pred <- ggplot(res$test_diag, aes(x = pred, y = obs)) +
-  geom_point(alpha = 0.3, color = "#009E73") +
+  geom_point(alpha = 0.3, color = "darkolivegreen4") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
   theme_minimal() +
   labs(
@@ -1653,7 +1565,6 @@ ggplot2::ggsave(
 ### Top Receivers (Ball-Flight Differential Over Expected)
 
 ```{r}
-#| label: load-rankings
 rankings_path <- "../processed/receiver_rankings.csv"
 if(file.exists(rankings_path)) {
   rankings <- read_csv(rankings_path)
@@ -1686,7 +1597,6 @@ if(file.exists(rankings_path)) {
 ```
 
 ```{r}
-#| label: load-bayesian-rankings
 rankings_bayes_path <- "../processed/receiver_rankings_bayes.csv"
 if (file.exists(rankings_bayes_path)) {
   rankings_bayes <- read_csv(rankings_bayes_path)
@@ -1716,18 +1626,17 @@ if (file.exists(rankings_bayes_path)) {
   }
 }
 ```
+These leaderboards are restricted to wide receivers and tight ends with at least 30 forward‑pass targets in the regular season, so we have enough data to use for the receiver rankings. 
 
-The wider confidence intervals (high variance) around the receiver’s values show that the players are not consistent, as they are open for some plays and disappear on others. On the other hand, the smaller intervals show players who are consistently reliable to gain separation in the air. 
+The wider confidence intervals (high variance) around the receiver’s values show that the players are not consistent, as they are open for some plays and disappear on others. On the other hand, the narrower intervals show players who are consistently reliable to gain separation in the air. 
 
-The receivers with large positive BFD Over Expected values meant that they consistently beat the model. After accounting for the throw difficulty with air time, initial differential, etc., they still end up more open at the catch than other similar players in similar situations by adjusting to the ball, having great tracking skills, etc. 
+The receivers with positive BFD Over Expected values mean that they consistently beat the model; after accounting for the throw difficulty with air time, initial differential, etc., they still end up more open at the catch than other similar players in similar situations by adjusting to the ball and having great tracking skills. Alternatively, receivers with negative values rely on the timing and scheme, while somewhat struggling to maintain leverage when the ball is released. They may be open at first, but do not sustain this openness throughout the ball's flight. 
 
-Receivers with negative values rely on the timing and scheme, while somewhat struggling to keep leverage when the ball is released. They may be open at first, but do not sustain this openness throughout the throw in the air. These leaderboards are restricted to wide receivers and tight ends with at least 30 forward‑pass targets in the 2023 regular season so we have enough data to use for the receiver rankings. 
+For example, Chris Olave has an BFD Over Expected of about 0.15, with a narrower CI of -0.07 to 0.38. This means Olave is somewhat consistent by adding about .15 of a yard of separation during the throw (after already accounting for route, defender, air in time, etc.). The narrower CI says that this separation is not due to noise of lucky plays, but rather that Olave is consistent. 
 
-For example, Chris Olave has an BFD Over Expected of about 0.15, with a narrower CI of -0.07 to 0.38. This means Olave is consistent by adding about a quarter yard of separation during the throw (after already accounting for route, defender, air in time, etc.). The narrower CI says that this separation is not due to noise of lucky plays, but rather that Olave is consistent. On the other hand, Kalif Raymond has an BFD Over Expected of about 0.24 and a wider CI of -0.03 to 0.58. While Raymond adds about half a yard of separation during the throw, which is better ball flight differential than Olave, we are not very confident that this is how he truly, consistently plays due to the wide CI. Thus, his BFD varies due to scheme, play, routes, mismatches of players, etc. There may be times when Raymond separates, versus times when he is not open at all. Overall, Olave shows a smaller, but more reliable pattern of separation, to frequently breaking open.
+On the other hand, Kalif Raymond has an BFD Over Expected of about 0.24 and a wider CI of -0.03 to 0.58. While Raymond adds about a quarter of a yard of separation during the throw (better BFD than Olave), we are not very confident that this is how he consistently plays due to his wide CI. Thus, his BFD may vary more due to scheme, play, routes, mismatches of players, etc. There may be more instances of variation when Raymond separates, versus times when he is not open at all. Overall, Olave shows a smaller, but more reliable pattern of separation to frequently breaking open.
 
 ```{r}
-#| label: code-bfd-bayes-intervals
-#| eval: false
 plot_bayesian_BFD_intervals <- function(rankings_bayes, top_n = 15) {
   if (!"BFD_over_expected_mean" %in% names(rankings_bayes)) {
     return(NULL)
@@ -1746,7 +1655,7 @@ plot_bayesian_BFD_intervals <- function(rankings_bayes, top_n = 15) {
     slice_max(BFD_over_expected_mean, n = top_n, with_ties = FALSE) |>
     mutate(label = fct_reorder(label, BFD_over_expected_mean)) |>
     ggplot(aes(x = label, y = BFD_over_expected_mean)) +
-    geom_point(color = "#0072B2") +
+    geom_point(color = "cornflowerblue") +
     geom_errorbar(
       aes(ymin = BFD_over_expected_lower, ymax = BFD_over_expected_upper),
       width = 0
@@ -1755,7 +1664,6 @@ plot_bayesian_BFD_intervals <- function(rankings_bayes, top_n = 15) {
     theme_minimal() +
     labs(
       title = "Top Receivers by BFD Over Expected (Bayesian)",
-      subtitle = "Posterior mean and 95% credible intervals",
       x = "Receiver",
       y = "BFD Over Expected (Yards)"
     )
@@ -1776,4 +1684,17 @@ if (file.exists(bayes_BFD_path)) {
 
 ## Improvements
 
-To improve our BFD metric, we would want to **filter by C in the pass_result** column, so we could see the effect on BFD dependent on if the throw was complete, incomplete, or intercepted. We also wanted to avoid selection bias by not only filtering towards good plays. Overall, we not only want to see if they have sticky hands, but how typical it is for the receiver to distance themselves from the defenders despite the outcome. We could also include the **routes with fixed effects (dig, go, etc.)** and create interaction terms to know which routes relate to more or less BFD skill. Another improvement could be to **weight the BFD metrics by the value** of their skill in the field; specifically, the catch probability and expected points added could help weight how much the BFD affects the value on the field. 
+To improve our BFD metric, we would want to **filter by C in the pass_result** column, so we could see the effect on BFD dependent on if the throw was complete, incomplete, or intercepted. For our model we created, we wanted to avoid selection bias by not only filtering towards good plays, so we included all (complete/incomplete). Overall, we not only want to see if they have sticky hands, but how typical it is for the receiver to distance themselves from the defenders despite the outcome. We could also include the **routes with fixed effects (dig, go, etc.)** and create interaction terms to know which routes relate to more or less BFD skill. Another improvement could be to **weight the BFD metrics by the value** of their skill in the field; specifically, the catch probability and expected points added could help weigh how much the BFD affects the value on the field. 
+
+
+## References
+
+After the Full-Time Whistle. (2023). Using Markov models to analyse defensive strategies in modern football (simplified & explained). Medium. https://medium.com/after-the-full-time-whistle/using-markov-models-to-analyse-defensive-strategies-in-modern-football-simplified-explained-68097ac008e8 
+
+Blanc, D., Luxenberg, A., & Xie, J. (2016). NFL score difference prediction with Markov modeling (CS229 Final Project Report). Stanford University. https://cs229.stanford.edu/proj2016/report/BlancLuxenbergXie-NFLScoreDifferencePredictionWithMarkovModeling-report.pdf 
+
+Dahl, J. (n.d.). Football analytics: Modeling receiver performance and separation. Columbia University. https://www.columbia.edu/~jad2295/Projects/Football%20Analytics.pdf 
+
+Pak, I. (n.d.). Mixing time and Markov chains. University of California, Los Angeles. https://www.math.ucla.edu/~pak/papers/stoc2.pdf 
+
+Sinclair, A. (n.d.). Liftings for Markov chains. University of California, Berkeley. https://people.eecs.berkeley.edu/~sinclair/liftings.pdf 
